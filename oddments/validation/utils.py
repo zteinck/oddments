@@ -1,8 +1,6 @@
 import numpy as np
 
 
-
-
 def validate_value(
     value,
     types,

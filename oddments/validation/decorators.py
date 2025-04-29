@@ -3,8 +3,6 @@ from functools import wraps
 from .utils import validate_value
 
 
-
-
 def validate_setter(call_func=False, **kwargs):
     '''
     Description
