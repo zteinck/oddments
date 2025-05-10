@@ -71,7 +71,8 @@ def _apply_default_name(obj, default_name):
         value=default_name,
         attr='default_name',
         types=str,
-        none_ok=True
+        none_ok=True,
+        empty_ok=False
         )
 
     if default_name is None:
@@ -121,6 +122,12 @@ def _coercion_wrapper(func):
         ndim : int
             Only returned if 'return_ndim' is True.
         '''
+        validate_value(
+            value=return_ndim,
+            attr='return_ndim',
+            types=bool,
+            )
+
         ndim = _get_data_dimensions(data)
 
         if ndim > 2:
@@ -155,7 +162,7 @@ def coerce_series(data, _ndim):
     elif isinstance(data, dict):
         n_keys = len(data)
         if n_keys == 0: # empty dictionary
-            return coerce_series([])
+            return pd.Series()
         if n_keys != 1:
             raise ValueError(
                 'Dictionary argument cannot have more '
@@ -165,7 +172,7 @@ def coerce_series(data, _ndim):
         return coerce_series(value).rename(key)
 
     if _ndim == 0: # single value
-        return coerce_series([data])
+        return pd.Series([data])
 
     elif _ndim == 1: # one-dimensional
         _validate_array_like(data)
@@ -188,10 +195,10 @@ def coerce_dataframe(data, _ndim):
         return data.to_frame()
 
     elif isinstance(data, dict) and len(data) > 0:
-        objs = [coerce_series({k: v}) for k, v in data.items()]
+        objs = [coerce_series(v).rename(k) for k, v in data.items()]
         return pd.concat(objs=objs, axis=1, join='outer')
 
     if _ndim <= 1: # single value or one-dimensional
-        return coerce_series(data).to_frame()
+        return coerce_series(data, default_name=None).to_frame()
 
     return pd.DataFrame(data)
