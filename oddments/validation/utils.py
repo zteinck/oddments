@@ -56,8 +56,11 @@ def validate_value(
     ------------
     None
     '''
-    if none_ok and value is None: return
-    attr_name = f"'{attr or 'value'}'"
+    if none_ok and value is None:
+        return
+
+    if attr is None:
+        attr = 'value'
 
     if not isinstance(types, tuple):
         types = (types,)
@@ -67,28 +70,42 @@ def validate_value(
         type_names = f"{', '.join(type_names[:-1])} or {type_names[-1]}" \
                      if len(type_names) > 1 else type_names[0]
         value_type = f'<{type(value).__name__}>'
-        raise TypeError(f"{attr_name} must be a {type_names}, got {value_type}.")
+        raise TypeError(
+            f'{attr!r} must be a {type_names}, '
+            f'got: {value_type}.'
+            )
 
     if blacklist is not None:
         if isinstance(blacklist, str):
             blacklist = [blacklist]
         if value in blacklist:
-            raise ValueError(f"{attr_name} cannot be in {blacklist}, got {value}.")
+            raise ValueError(
+                f'{attr!r} cannot be in {blacklist}, '
+                f'got: {value!r}.'
+                )
 
     if whitelist is not None:
         if isinstance(whitelist, str):
             whitelist = [whitelist]
         if value in whitelist: return
-        raise ValueError(f"{attr_name} must be in {whitelist}, got {value}.")
+        raise ValueError(
+            f'{attr!r} must be in {whitelist}, '
+            f'got: {value!r}.'
+            )
 
     if not empty_ok and len(value) == 0:
-        raise ValueError(f"{attr_name} cannot be empty.")
+        raise ValueError(
+            f"{attr!r} cannot be empty."
+            )
 
     if finite:
         if not np.isfinite(value):
-            raise TypeError(f"{attr_name} must be finite, got {value}")
+            raise TypeError(
+                f'{attr!r} must be finite, '
+                f'got: {value!r}.'
+                )
 
-    msg = f"{attr_name} must be {{0}} {{1}}, got {value}"
+    msg = f"{attr!r} must be {{0}} {{1}}, got: {value!r}"
 
     if min_value is not None:
         symbol = None
