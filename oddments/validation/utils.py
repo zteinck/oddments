@@ -87,11 +87,20 @@ def validate_value(
     if whitelist is not None:
         if isinstance(whitelist, str):
             whitelist = [whitelist]
-        if value in whitelist: return
-        raise ValueError(
-            f'{attr!r} must be in {whitelist}, '
-            f'got: {value!r}.'
-            )
+
+        typed_whitelist = [
+            x for x in whitelist
+            if isinstance(x, type(value))
+            ]
+
+        if typed_whitelist:
+            if value in typed_whitelist:
+                return
+
+            raise ValueError(
+                f'{attr!r} must be in {whitelist}, '
+                f'got: {value!r}.'
+                )
 
     if not empty_ok and len(value) == 0:
         raise ValueError(
