@@ -29,10 +29,10 @@ def validate_setter(call_func=False, **kwargs):
 
         @wraps(func)
         def wrapper(self, value):
-            attr = func.__name__
-            validate_value(attr=attr, value=value, **kwargs)
+            name = func.__name__
+            validate_value(value=value, name=name, **kwargs)
             if call_func: return func(self, value)
-            setattr(self, '_' + attr, value)
+            setattr(self, '_' + name, value)
 
         return wrapper
 

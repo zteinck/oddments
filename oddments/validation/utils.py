@@ -4,7 +4,7 @@ import numpy as np
 def validate_value(
     value,
     types,
-    attr=None,
+    name=None,
     finite=False,
     min_value=None,
     max_value=None,
@@ -26,7 +26,7 @@ def validate_value(
         argument to validate
     types : object | tuple
         one or more valid types of which value is allowed to be an instance.
-    attr : str | None
+    name : str | None
         Optional name of value to include in error messages. If None, 'value'
         is used.
     finite : bool
@@ -59,8 +59,8 @@ def validate_value(
     if none_ok and value is None:
         return
 
-    if attr is None:
-        attr = 'value'
+    if name is None:
+        name = 'value'
 
     if not isinstance(types, tuple):
         types = (types,)
@@ -71,7 +71,7 @@ def validate_value(
                      if len(type_names) > 1 else type_names[0]
         value_type = f'<{type(value).__name__}>'
         raise TypeError(
-            f'{attr!r} must be a {type_names}, '
+            f'{name!r} must be a {type_names}, '
             f'got: {value_type}.'
             )
 
@@ -80,7 +80,7 @@ def validate_value(
             blacklist = [blacklist]
         if value in blacklist:
             raise ValueError(
-                f'{attr!r} cannot be in {blacklist}, '
+                f'{name!r} cannot be in {blacklist}, '
                 f'got: {value!r}.'
                 )
 
@@ -98,23 +98,23 @@ def validate_value(
                 return
 
             raise ValueError(
-                f'{attr!r} must be in {whitelist}, '
+                f'{name!r} must be in {whitelist}, '
                 f'got: {value!r}.'
                 )
 
     if not empty_ok and len(value) == 0:
         raise ValueError(
-            f"{attr!r} cannot be empty."
+            f"{name!r} cannot be empty."
             )
 
     if finite:
         if not np.isfinite(value):
             raise TypeError(
-                f'{attr!r} must be finite, '
+                f'{name!r} must be finite, '
                 f'got: {value!r}.'
                 )
 
-    msg = f"{attr!r} must be {{0}} {{1}}, got: {value!r}"
+    msg = f"{name!r} must be {{0}} {{1}}, got: {value!r}"
 
     if min_value is not None:
         symbol = None

@@ -34,7 +34,7 @@ def add_border(text, width=100, fixed_width=False, align='left'):
 
     validate_value(
         value=align,
-        attr='align',
+        name='align',
         types=str,
         whitelist=['left','right','center'],
         )

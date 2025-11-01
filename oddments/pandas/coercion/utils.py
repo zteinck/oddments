@@ -9,7 +9,7 @@ def _validate_array_like(data):
     ''' raises an error if data is not array-like '''
     validate_value(
         value=data,
-        attr='data',
+        name='data',
         types=(list, tuple, np.ndarray)
         )
 
@@ -69,7 +69,7 @@ def _apply_default_name(obj, default_name):
     '''
     validate_value(
         value=default_name,
-        attr='default_name',
+        name='default_name',
         types=str,
         none_ok=True,
         empty_ok=False
@@ -124,7 +124,7 @@ def _coercion_wrapper(func):
         '''
         validate_value(
             value=return_ndim,
-            attr='return_ndim',
+            name='return_ndim',
             types=bool,
             )
 

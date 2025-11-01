@@ -68,7 +68,7 @@ def verify_no_duplicates(df, attr, label=None, dropna=None):
     '''
     validate_value(
         value=attr,
-        attr='attr',
+        name='attr',
         types=str,
         whitelist=['columns','index','values']
         )
