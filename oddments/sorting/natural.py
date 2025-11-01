@@ -1,7 +1,7 @@
 import re
 
 
-def natural_sort(array, inplace=False):
+def natural_sort(array):
     '''
     Description
     ------------
@@ -14,15 +14,13 @@ def natural_sort(array, inplace=False):
 
     Parameters
     ------------
-    array :  list
-        list to sort
-    inplace : bool
-        if True, sorting will be done inplace
+    array :  array-like
+        Array to sort naturally.
 
     Returns
     ------------
-    out : list | None
-        list if inplace is False otherwise None
+    sorted : array-like
+        Sorted array.
     '''
 
     def alphanumeric_key(element):
@@ -32,13 +30,10 @@ def natural_sort(array, inplace=False):
         def try_int(x):
             try:
                 return int(x)
-            except:
+            except (ValueError, TypeError):
                 return x
 
-        out = list(map(try_int, re.split('([0-9]+)', str(element))))
-        return out
+        parts = re.split(r'([0-9]+)', str(element))
+        return list(map(try_int, parts))
 
-    if inplace:
-        array.sort(key=alphanumeric_key)
-    else:
-        return sorted(array, key=alphanumeric_key)
+    return sorted(array, key=alphanumeric_key)
