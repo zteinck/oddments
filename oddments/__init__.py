@@ -4,5 +4,5 @@ from .sorting import *
 from .text import *
 from .validation import *
 
-__version__ = '0.3.1'
+__version__ = '0.4.0'
 __author__ = 'Zachary Einck <zacharyeinck@gmail.com>'
