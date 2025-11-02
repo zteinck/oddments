@@ -19,18 +19,19 @@ def _get_data_dimensions(data):
     Description
     ------------
     Returns the number of dimensions of the input data. np.ndim returns:
-        • 0 for single values (e.g. 'abc', 7, None, {'a': 9, 'b': [1, 2]}),
+        • 0 for single values (e.g. 'abc', 7, None)
         • 1 for flat (un-nested) array-like data (e.g. [], [1, 2, 3])
-        • 2 for once nested array-like data (e.g. [ [1, 3], [2, 4] ]
+        • 2 for once nested array-like data (e.g. [[1, 3], [2, 4]]
 
-    However, it will raise a value error on irregularly shaped array-like data
-    such as jagged lists (e.g. [[1, 2], [0]]) that are otherwise still DataFrame
-    compatible. This function handles such edge cases by attempting to return the
-    maximum number of dimensions among the constituent elements of the input data.
+    However, it will raise a value error on irregularly shaped array-like
+    data such as jagged lists (e.g. [[1, 2], [0]]) that are otherwise still
+    DataFrame compatible. This function handles such edge cases by
+    attempting to return the maximum number of dimensions among the
+    constituent elements of the input data.
 
     Parameters
     ------------
-    data : *
+    data : any
         input data
 
     Returns
@@ -38,6 +39,12 @@ def _get_data_dimensions(data):
     ndim : int
         Maximum number of dimensions of the input data.
     '''
+    if isinstance(data, dict):
+        return max(len(data), 1)
+
+    if isinstance(data, set):
+        return 1
+
     try:
         return np.ndim(data)
     except ValueError:
@@ -106,7 +113,7 @@ def _coercion_wrapper(func):
 
         Parameters
         ------------
-        data : *
+        data : any
             Data to be coerced to a Series or DataFrame.
             If 'data' is already of the desired type, a deep copy is
             returned.
@@ -130,11 +137,15 @@ def _coercion_wrapper(func):
 
         ndim = _get_data_dimensions(data)
 
-        if ndim > 2:
+        if not 0 <= ndim <= 2:
             raise ValueError(
-                f"Expected ndim to be ≤ 2, got: {ndim}. "
-                f"Coercion failed for 'data': {data}."
+                f"Expected ndim to be ≤ 2, got: {ndim}. Invalid 'data' "
+                f"argument of type <{type(data).__name__}>:\n\n{data}."
                 )
+
+        # sets are not compatible with pd.Series
+        if isinstance(data, set):
+            data = list(data)
 
         out = func(data, _ndim=ndim).copy(deep=True)
         out = _apply_default_name(out, default_name)
@@ -195,10 +206,74 @@ def coerce_dataframe(data, _ndim):
         return data.to_frame()
 
     elif isinstance(data, dict) and len(data) > 0:
-        objs = [coerce_series(v).rename(k) for k, v in data.items()]
-        return pd.concat(objs=objs, axis=1, join='outer')
+        objs = [
+            coerce_series(v).rename(k)
+            for k, v in data.items()
+            ]
+        return pd.concat(
+            objs=objs,
+            axis=1,
+            join='outer'
+            )
 
     if _ndim <= 1: # single value or one-dimensional
-        return coerce_series(data, default_name=None).to_frame()
+        return coerce_series(
+            data=data,
+            default_name=None
+            ).to_frame()
 
     return pd.DataFrame(data)
+
+
+def coerce_ndim(data, ndim):
+    '''
+    Description
+    ------------
+    Reshapes data to a desired number of dimensions. Useful for ensuring that
+    transformed data preserves the same dimensionality as the original input.
+
+    Parameters
+    ------------
+    data : any
+        Data to be coerced to a DataFrame, Series, or scalar.
+    ndim : int
+        Desired number of dimensions. Supported optoins include:
+            0: scalar
+            1: pd.Series
+            2: pd.DataFrame
+
+    Returns
+    ------------
+    out : pd.DataFrame | pd.Series | any (scalar)
+        Input data represented as a pandas object or scalar.
+    '''
+    validate_value(
+        value=ndim,
+        name='ndim',
+        types=int
+        )
+
+    if not 0 <= ndim <= 2:
+        raise NotImplementedError(
+            f'Unsupported ndim={ndim}'
+            )
+
+    # two-dimensional ➜ DataFrame
+    if ndim == 2:
+        return coerce_dataframe(data)
+
+    s = coerce_series(data)
+
+    # one-dimensional ➜ Series
+    if ndim == 1:
+        return s
+
+    # zero dimensions ➜ scalar
+    if ndim == 0:
+        if len(s) == 1:
+            return s.iat[0]
+        else:
+            raise ValueError(
+                'Cannot reduce series of length '
+                f'{len(s):,} to scalar:\n\n{s}'
+                )

@@ -1,113 +1,235 @@
+from functools import wraps
 import pandas as pd
 
 from ..validation import validate_value
-from .utils import get_index_names
+from .coercion import preserve_input_type
+
+from .indexing import (
+    has_default_index,
+    has_named_index,
+    get_index_names,
+    verify_index_values,
+    )
 
 
+def _resolve_include_index(func):
+
+    @wraps(func)
+    def wrapper(obj, *args, **kwargs):
+        params = {**kwargs}
+        key = 'include_index'
+        value = params.get(key, False)
+
+        if value and has_default_index(obj):
+            value = False
+
+        if value and not has_named_index(obj):
+            raise NotImplementedError(
+                'Support for including unnamed '
+                'index is not yet implemented.'
+                )
+
+        params[key] = value
+        return func(obj, *args, **params)
+
+    return wrapper
+
+
+@preserve_input_type
+@_resolve_include_index
 def drop_duplicates(df, **kwargs):
     '''
     Description
     ------------
-    Alternative to pandas' native DataFrame.drop_duplicates that does
-    not ignore the index.
+    Alternative to pandas' drop_duplicates() that optionally considers the
+    index.
 
     Parameters
     ------------
+    df : pd.DataFrame
+        Object with duplicates to be removed.
+    include_index : bool
+        If True, duplicate detection considers both the index and row values,
+        rather than just the row values.
     kwargs : dict
-        keyword arguments passed to the native method.
+        Keyword arguments passed to the native method.
 
     Returns
     ------------
-    df : pd.DataFrame
-        DataFrame with duplicate rows removed.
+    out : pd.DataFrame | pd.Series
+        Pandas object with duplicates removed.
     '''
-    ok_kwargs = ['subset','keep']
-    bad_kwargs = [k for k in kwargs if k not in ok_kwargs]
+    params = {**kwargs}
 
-    if bad_kwargs:
-        raise NotImplementedError(
-            f'Unsupported kwargs: {bad_kwargs}'
+    key = 'inplace'
+    if params.get(key, False):
+        raise ValueError(
+            f"The {key!r} parameter is not supported."
             )
 
-    index = get_index_names(df)
-    if index: df = df.reset_index()
-    df = df.drop_duplicates(**kwargs)
-    if index: df = df.set_index(index)
+    include_index = params.pop('include_index')
+
+    if include_index:
+        index_names = get_index_names(df, simplify=True)
+        df = df.reset_index()
+
+    df = df.drop_duplicates(**params)
+
+    if include_index:
+        df = (
+            df.drop(columns=index_names)
+            if params.get('ignore_index')
+            else df.set_index(index_names)
+            )
+
     return df
 
 
-def verify_no_duplicates(df, attr, label=None, dropna=None):
+@preserve_input_type
+@_resolve_include_index
+def verify_unique(
+    df,
+    label=None,
+    column_names=True,
+    column_values=False,
+    index_names=True,
+    index_values=False,
+    dropna=False,
+    show_top=10,
+    **kwargs
+    ):
     '''
     Description
     ------------
-    Raises an error if duplicates are found in the specified DataFrame
-    attribute.
+    Raises an error if duplicates are found.
 
     Parameters
     ------------
-    df : pd.DataFrame | pd.Series
-        pandas object to inspect for duplicates
-    attr : str
-        DataFrame attribute to inspect for duplicates:
-            • 'columns' ➜ column names
-            • 'index' ➜ index values
-            • 'values' ➜ column values
+    df : pd.DataFrame
+        DataFrame to inspect for duplicates.
     label : str | None
-        • attr = 'values' ➜ Name of the column to inspect for duplicates; may
-          be None if only one column is present.
-        • attr in ('columns','index') ➜ Optional supplemental text to include
-          in the error message for additional context.
-    dropna : bool | None
-        • True ➜ NaN values are ignored when identifying duplicates.
-        • False ➜ NaN values are considered when identifying duplicates.
-        • None ➜ defaults to True when attr='values', otherwise False.
+        Display name for error messages.
+    column_names : bool
+        If True, check for duplicates among the column names.
+    column_values : bool
+        If True, check for duplicates among column values. Use
+        'include_index=True' to also consider index values when checking
+        column value duplicates.
+    index_names : bool
+        If True, check for duplicates among the names of the index
+        levels and for conflicts with column names.
+    index_values : bool
+        If True, check for duplicates and NaNs among the values in the index.
+    include_index : bool
+        If True and 'column_values=True', duplicate detection considers both
+        index and column values.
+    subset : None | list | str
+        Subset of columns to consider when 'column_values=True'.
+            • If None, include all columns.
+            • If list, include only the specified columns.
+            • If str, include a single column.
+        Notes:
+            • If 'subset' is not None, 'column_values' is automatically set to
+              True.
+            • If 'include_index=True', index values are automatically included
+              in the subset.
+    dropna : bool
+        If False, NaN values are considered when identifying duplicates in
+        column values.
+    show_top : int | None
+        If int, the maximum number of duplicates that may be included
+        in the error message.
 
     Returns
     ------------
     None
     '''
-    validate_value(
-        value=attr,
-        name='attr',
-        types=str,
-        whitelist=['columns','index','values']
-        )
 
-    if isinstance(df, pd.Series):
-        if attr == 'columns': return
-        df = df.to_frame()
-    else:
-        validate_value(value=df, types=pd.DataFrame)
+    def check(obj, msg):
+        if isinstance(obj, list):
+            obj = pd.Series(obj)
 
-    is_values = attr == 'values'
+        if len(obj) < 2: return
+        s = obj.value_counts(dropna=False)
 
-    if is_values and label is None:
-        if len(df.columns) == 1:
-            label = df.columns[0]
-        else:
-            raise ValueError(
-                "A column name must be specified using the 'label' "
-                "argument when attr='values' and multiple columns exist."
+        dupes = s[(s > 1)]
+        if dupes.empty: return
+
+        if show_top is not None \
+            and show_top < len(dupes):
+            dupes = dupes.head(show_top)
+            msg = f'{msg} (top {show_top} showing)'
+
+        dupes = dupes.to_frame()
+        raise ValueError(f'{msg}:\n\n{dupes}\n')
+
+
+    # default label
+    if label is None:
+        label = 'df'
+
+    # standard error message verbiage
+    msg = f'Duplicates detected in {label}'
+
+    # check for invalid column names (NaN or None)
+    if df.columns.isna().any():
+        raise ValueError(
+            f'NaNs detected in {label} column names.'
+            )
+
+    # check for duplicate column names
+    col_names = df.columns.tolist()
+
+    if column_names:
+        check(col_names, f'{msg} column names')
+
+    if index_names:
+        # retrieve index names
+        idx_names = get_index_names(df, drop_none=True)
+
+        if idx_names:
+            # check for duplicate index names
+            check(idx_names, f'{msg} index names')
+
+            # check for conflicts between index and column names
+            check(
+                idx_names + col_names,
+                f'Conflicts detected between {label} '
+                'index and column names'
                 )
 
-    msg = ['Duplicates detected in']
+    if index_values:
+        # check for invalid index values (NaN or None)
+        verify_index_values(df)
 
-    if is_values:
-        verify_no_duplicates(df, attr='columns')
-        obj = df[label]
-        msg.append('column')
+        # check for duplicate index values
+        # using mask to make value_counts more efficient
+        mask = df.index.duplicated(keep=False)
+        check(df.index[mask], f'{msg} index values')
+
+    if df.empty: return
+
+    if isinstance(column_values, bool):
+        if not column_values: return
+        subset = df.columns.tolist()
+    elif isinstance(column_values, str):
+        subset = [column_values]
     else:
-        obj = getattr(df, attr)
-        # if not obj.has_duplicates: return
+        validate_value(column_values, list)
+        subset = column_values[:]
 
-    if dropna is None:
-        dropna = is_values
+    for k in subset:
+        validate_value(k, name='column', types=str)
 
-    s = obj.value_counts(dropna=dropna)
+    df = df[subset]
 
-    dupes = s[ s > 1 ].head(10).to_frame()
-    if dupes.empty: return
+    if kwargs['include_index']:
+        df = df.reset_index()
 
-    if label is not None: msg.append(f"'{label}'")
-    msg.append('column names' if attr == 'columns' else attr)
-    raise ValueError(' '.join(msg) + f':\n\n{dupes}\n')
+    if dropna:
+        df = df.dropna()
+        if df.empty: return
+
+    # using mask to make value_counts more efficient
+    mask = df.duplicated(keep=False)
+    check(df[mask], f'{msg} values')

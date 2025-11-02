@@ -3,25 +3,20 @@ import pandas as pd
 from .decorators import purge_whitespace
 
 
-def get_index_names(df):
-    ''' returns list of pandas DataFrame index name(s) '''
-    return list(filter(None, list(df.index.names)))
-
-
 def columns_apply(df, func, inplace=False):
     '''
     Description
     ------------
-    applies a uniform function to all column names in a dataframe
+    Applies a uniform function to all column names in a DataFrame.
 
     Parameters
     ------------
     df : pd.DataFrame
         dataframe to adjust column names
     func : func | str
-        function to apply to each column name. If string, it will be interpreted
-        as an attribute function of the column datatype (e.g. 'lower', 'upper',
-        'title', 'int', etc.).
+        function to apply to each column name. If string, it will be
+        interpreted as an attribute function of the column datatype
+        (e.g. 'lower', 'upper', 'title', 'int', etc.).
 
     Returns
     ------------
@@ -39,21 +34,23 @@ def column_name_is_datelike(name):
     ''' returns True if the given column name appears to represent a date,
         time, or both '''
     name = name.lower()
-    return any(x in name for x in ('date','time')) or name[-2:] == 'dt'
+    word_match = any(word in name for word in ('date','time'))
+    return word_match or name[-2:] == 'dt'
 
 
 def infer_data_types(obj):
-    ''' the appropriate data types are inferred for all columns in the DataFrame '''
+    ''' infers the appropriate data type for all columns in the DataFrame '''
 
     @purge_whitespace
     def preprocess_obj(obj):
         if isinstance(obj, pd.DataFrame):
             return obj.copy(deep=True)
         elif isinstance(obj, pd.Series):
-            return obj.to_frame()
+            return obj.to_frame().copy(deep=True)
         else:
             raise TypeError(
-                f"'obj' argument type not supported: {type(obj).__name__}"
+                "'obj' argument type not supported: "
+                f"{type(obj).__name__}"
                 )
 
     df = preprocess_obj(obj)
