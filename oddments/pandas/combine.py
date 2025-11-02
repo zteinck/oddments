@@ -115,10 +115,8 @@ def _merge(left, right, _join, **kwargs):
     is_anti = params['how'] == 'anti'
 
     if is_anti:
-        params.update({
-            'how': 'left',
-            'indicator': True,
-            })
+        params.update({'how': 'left', 'indicator': True})
+        right = right[[] if _join else params['right_on']]
 
     left_cols, right_cols = (
         obj.columns.tolist()
@@ -153,7 +151,6 @@ def _merge(left, right, _join, **kwargs):
     if is_anti:
         key = '_merge'
         df = df[(df[key] == 'left_only')]
-        df = df.drop(columns=right_cols)
         if not kwargs.get('indicator', False):
             df = df.drop(columns=key)
 
