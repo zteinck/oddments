@@ -46,8 +46,8 @@ def drop_duplicates(df, **kwargs):
 
     Parameters
     ------------
-    df : pd.DataFrame
-        Object with duplicates to be removed.
+    obj : pd.DataFrame | pd.Series
+        Pandas object to inspect for duplicates.
     include_index : bool
         If True, duplicate detection considers both the index and row values,
         rather than just the row values.
@@ -105,34 +105,24 @@ def verify_unique(
 
     Parameters
     ------------
-    df : pd.DataFrame
-        DataFrame to inspect for duplicates.
+    obj : pd.DataFrame | pd.Series
+        Pandas object to inspect for duplicates.
     label : str | None
         Display name for error messages.
     column_names : bool
         If True, check for duplicates among the column names.
     column_values : bool
-        If True, check for duplicates among column values. Use
-        'include_index=True' to also consider index values when checking
-        column value duplicates.
+        • If True, check for duplicate rows.
+        • If list, include only the specified columns.
+        • If str, include a single column.
     index_names : bool
         If True, check for duplicates among the names of the index
         levels and for conflicts with column names.
     index_values : bool
         If True, check for duplicates and NaNs among the values in the index.
     include_index : bool
-        If True and 'column_values=True', duplicate detection considers both
-        index and column values.
-    subset : None | list | str
-        Subset of columns to consider when 'column_values=True'.
-            • If None, include all columns.
-            • If list, include only the specified columns.
-            • If str, include a single column.
-        Notes:
-            • If 'subset' is not None, 'column_values' is automatically set to
-              True.
-            • If 'include_index=True', index values are automatically included
-              in the subset.
+        If True and column_values is not False, duplicate detection considers
+        both index and column values.
     dropna : bool
         If False, NaN values are considered when identifying duplicates in
         column values.
