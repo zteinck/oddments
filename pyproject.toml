@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oddments"
-version = "0.4.2"
+version = "0.4.3"
 description = "Collection of general-purpose utilities."
 authors = ["Zachary Einck <zacharyeinck@gmail.com>"]
 license = "MIT"
