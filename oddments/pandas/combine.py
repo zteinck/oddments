@@ -290,8 +290,10 @@ def concat(objs, **kwargs):
     ------------
     Alternative to pandas' 'pd.concat' function that offers several
     quality-of-life enhancements:
-        • Ensures the index of the left-most pandas object is preserved.
-        • If 'ignore_index' is not provided, an appropriate value is inferred.
+        • Ensures the index name of the left-most pandas object is preserved
+          when 'ignore_index=False'.
+        • If 'ignore_index' keyword argument is not provided or None, an
+          appropriate value is inferred.
 
     Parameters
     ------------
@@ -316,12 +318,16 @@ def concat(objs, **kwargs):
 
     key = 'ignore_index'
     if params.get(key) is None:
-        params[key] = not has_named_index(objs[0])
+        params[key] = (
+            not has_named_index(objs[0])
+            if params['axis'] == 0
+            else False
+            )
 
     df = pd.concat(objs, **params)
 
     # verify index name(s) were preserved
-    if params[key]:
+    if not params[key]:
         verify_index_names(df, index_names)
 
     return df
