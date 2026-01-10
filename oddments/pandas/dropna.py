@@ -1,24 +1,23 @@
 import numpy as np
 
 from .coercion import with_coerce_series
+from .indexing import verify_index_monotonicity
 
 
 @with_coerce_series
-def dropna_edges(s, drop_inf=False, ignore_gaps=False):
+def trim_na(s, inf_as_na=False, raise_on_na=False):
     '''
     Description
     ------------
-    Drops leading and trailing NaN values in a Series. Only Series with
+    Drops leading and trailing NaN values from a Series. Only Series with
     indexes sorted in ascending order are supported.
 
     Parameters
     ------------
-    drop_inf : bool
-        If True, infinite values replaced with NaN
-    ignore_gaps : bool
-        If True, NaN values exist between valid values are permitted.
-        If False, if any NaN values exist between valid values, an exception
-            is raised.
+    inf_as_na : bool
+        If True, infinite values replaced with NaN.
+    raise_on_na : bool
+        If True, an error is raised if interior NaNs are present.
 
     Returns
     ------------
@@ -26,29 +25,24 @@ def dropna_edges(s, drop_inf=False, ignore_gaps=False):
        Series with leading and trailing NaN values dropped.
     '''
 
-    if not s.index.is_monotonic_increasing:
-        raise NotImplementedError(
-            "'s' argument's index must be "
-            "sorted in ascending order."
-            )
+    verify_index_monotonicity(s, direction='increasing')
 
-    if drop_inf:
+    if inf_as_na:
         s.replace(
             to_replace=[np.inf, -np.inf],
             value=np.nan,
             inplace=True
             )
 
-    first_index = s.first_valid_index()
-    last_index = s.last_valid_index()
+    start = s.first_valid_index()
+    stop = s.last_valid_index()
+    out = s.loc[start:stop]
 
-    out = s.loc[first_index:last_index]
-
-    if ignore_gaps or out.notna().all():
+    if not raise_on_na or out.notna().all():
         return out
 
-    msg = ["'s' argument cannot contain NaN"]
-    if drop_inf: msg.append('or Inf(+/-)')
+    msg = ['Series cannot contain NaN']
+    if inf_as_na: msg.append('or Inf(+/-)')
     z = s.loc[(out[out.isna()].index)]
-    msg.append(f"between valid values: \n\n{z}\n")
+    msg.append(f'between valid values: \n\n{z}\n')
     raise ValueError(' '.join(msg))

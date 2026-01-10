@@ -13,7 +13,7 @@ from .decorators import (
     purge_whitespace,
     )
 
-from .dropna import dropna_edges
+from .dropna import trim_na
 
 from .dupes import (
     drop_duplicates,
