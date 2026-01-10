@@ -341,3 +341,25 @@ def concat(objs, **kwargs):
         verify_index_names(df, index_names)
 
     return df
+
+
+def hconcat(objs, **kwargs):
+    ''' horizontally concatenates pandas objects '''
+    params = {**kwargs}
+
+    key, value = 'axis', 1
+    params.setdefault(key, value)
+
+    if params[key] != value:
+        raise ValueError(f'{key!r} must be {value}.')
+
+    out = concat(objs, **params)
+
+    verify_unique(
+        out,
+        label='hconcat output',
+        column_names=True,
+        index_names=True,
+        )
+
+    return out

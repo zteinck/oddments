@@ -5,6 +5,7 @@ from .combine import (
     merge,
     join,
     concat,
+    hconcat,
     )
 
 from .decorators import (
