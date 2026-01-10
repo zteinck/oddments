@@ -294,6 +294,8 @@ def concat(objs, **kwargs):
           when 'ignore_index=False'.
         • If 'ignore_index' keyword argument is not provided or None, an
           appropriate value is inferred.
+        • Allows 'how' to be used in place of pd.concat's 'join' keyword
+          argument for consistency with merge and join functions.
 
     Parameters
     ------------
@@ -308,6 +310,14 @@ def concat(objs, **kwargs):
         Concatenated objects
     '''
     params = {**kwargs}
+
+    if 'how' in params:
+        if 'join' in params:
+            raise ValueError(
+                "Cannot specify both 'how' and 'join'."
+                )
+        params['join'] = params.pop('how')
+
     defaults = dict(axis=0, join='outer')
 
     for key, default in defaults.items():
