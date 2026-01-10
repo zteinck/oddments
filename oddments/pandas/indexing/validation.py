@@ -68,3 +68,36 @@ def verify_index_values(obj):
             raise ValueError(
                 f'NaNs detected in {label} index values.'
                 )
+
+
+def verify_index_monotonicity(obj, direction='increasing'):
+    '''
+    Description
+    ------------
+    Checks if a DataFrame or Series index is monotonic.
+
+    Parameters
+    ------------
+    obj : pd.DataFrame | pd.Series
+        pandas object
+    direction : str
+        The direction to validate: 'increasing' or 'decreasing'
+
+    Returns
+    ------------
+    None
+    '''
+
+    validate_value(
+        name='direction',
+        value=direction,
+        types=str,
+        whitelist=['increasing','decreasing']
+        )
+
+    is_valid = getattr(obj.index, f'is_monotonic_{direction}')
+
+    if not is_valid:
+        raise ValueError(
+            f'Index is not monotonic {direction}.'
+            )

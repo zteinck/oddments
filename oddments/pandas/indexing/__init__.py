@@ -8,4 +8,5 @@ from .utils import (
 from .validation import (
     verify_index_names,
     verify_index_values,
+    verify_index_monotonicity,
     )
