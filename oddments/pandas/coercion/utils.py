@@ -10,7 +10,7 @@ def _validate_array_like(data):
     validate_value(
         value=data,
         name='data',
-        types=(list, tuple, np.ndarray)
+        types=(list, tuple, np.ndarray, pd.Index)
         )
 
 
@@ -40,16 +40,22 @@ def _get_data_dimensions(data):
         Maximum number of dimensions of the input data.
     '''
     if isinstance(data, dict):
-        return max(len(data), 1)
+        ndim = min(max(len(data), 1), 2)
 
-    if isinstance(data, set):
-        return 1
+    elif isinstance(data, set):
+        ndim = 1
 
-    try:
-        return np.ndim(data)
-    except ValueError:
-        _validate_array_like(data)
-        return max(np.ndim([x]) for x in data)
+    elif isinstance(data, pd.Index):
+        ndim = min(data.nlevels, 2)
+
+    else:
+        try:
+            ndim = np.ndim(data)
+        except ValueError:
+            _validate_array_like(data)
+            ndim = max(np.ndim([x]) for x in data)
+
+    return int(ndim)
 
 
 def _apply_default_name(obj, default_name):
@@ -144,7 +150,7 @@ def _coercion_wrapper(func):
                 )
 
         # sets are not compatible with pd.Series
-        if isinstance(data, set):
+        if isinstance(data, (set, range)):
             data = list(data)
 
         out = func(data, _ndim=ndim).copy(deep=True)
@@ -177,7 +183,7 @@ def coerce_series(data, _ndim):
         if n_keys != 1:
             raise ValueError(
                 'Dictionary argument cannot have more '
-                f'than one key, got {n_keys} keys.'
+                f'than 1 key, got {n_keys:,} keys.'
                 )
         key, value = next(iter(data.items()))
         return coerce_series(value).rename(key)
@@ -204,6 +210,9 @@ def coerce_dataframe(data, _ndim):
 
     elif isinstance(data, pd.Series):
         return data.to_frame()
+
+    elif isinstance(data, pd.Index):
+        return data.to_frame(index=False)
 
     elif isinstance(data, dict) and len(data) > 0:
         objs = [
