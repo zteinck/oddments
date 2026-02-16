@@ -1,4 +1,5 @@
 from .iteration import *
+from .mixins import *
 from .pandas import *
 from .sorting import *
 from .text import *
