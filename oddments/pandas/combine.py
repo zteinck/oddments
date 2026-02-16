@@ -288,8 +288,8 @@ def concat(objs, **kwargs):
     '''
     Description
     ------------
-    Alternative to pandas' 'pd.concat' function that offers several
-    quality-of-life enhancements:
+    Wrapper around pandas.concat that offers several quality-of-life
+    enhancements:
         • Ensures the index name of the left-most pandas object is preserved
           when 'ignore_index=False'.
         • If 'ignore_index' keyword argument is not provided or None, an
@@ -343,23 +343,49 @@ def concat(objs, **kwargs):
     return df
 
 
-def hconcat(objs, **kwargs):
-    ''' horizontally concatenates pandas objects '''
+def hconcat(objs, index=None, **kwargs):
+    '''
+    Description
+    ------------
+    Wrapper around pandas.concat that concatenates objects horizontally along
+    columns by default (i.e. axis=1).
+
+    Parameters
+    ------------
+    objs : array-like[pd.DataFrame | pd.Series]
+        Array of pandas objects.
+    index : any | None
+        If not None, the result is reindexed to this index after
+        concatenation.
+    kwargs : dict
+        Keyword arguments passed to 'concat' function.
+
+    Returns
+    ------------
+    df : pd.DataFrame
+        Horizontally concatenated objects.
+    '''
     params = {**kwargs}
 
     key, value = 'axis', 1
     params.setdefault(key, value)
 
     if params[key] != value:
-        raise ValueError(f'{key!r} must be {value}.')
+        raise ValueError(
+            f'{key!r} must be {value}.'
+            )
 
-    out = concat(objs, **params)
+    df = concat(objs, **params)
+
+    if index is not None:
+        df = df.reindex(index)
 
     verify_unique(
-        out,
-        label='hconcat output',
+        df,
+        label='hconcat result',
         column_names=True,
         index_names=True,
+        index_values=True,
         )
 
-    return out
+    return df
