@@ -17,15 +17,15 @@ def add_border(text, width=100, fixed_width=False, align='left'):
         'textwrap.wrap' width argument. If width=1, the text is printed
         vertically.
     fixed_width : bool
-        • True ➜ the width of the border will equal the 'width' argument
-                  value.
-        • False ➜ the width of the border is capped at the length of the
-                   longest line in the text.
+        • True → the width of the border will equal the 'width' argument
+            value.
+        • False → the width of the border is capped at the length of the
+            longest line in the text.
     align : str
-        • 'left' ➜ aligns text along the left margin
-        • 'center' ➜ aligns text in the center between the left and right
-                      margins
-        • 'right' ➜ aligns text along the right margin
+        • 'left' → aligns text along the left margin
+        • 'center' → aligns text in the center between the left and right
+            margins
+        • 'right' → aligns text along the right margin
 
     Returns
     ------------

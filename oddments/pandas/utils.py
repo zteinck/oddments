@@ -60,7 +60,7 @@ def infer_data_types(obj):
             try:
                 df[k] = pd.to_datetime(df[k])
             except Exception as e:
-                print(k, '➜', e)
+                print(k, '→', e)
         else:
             try:
                 df[k] = pd.to_numeric(df[k])

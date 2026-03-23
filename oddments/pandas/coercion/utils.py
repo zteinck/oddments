@@ -267,17 +267,17 @@ def coerce_ndim(data, ndim):
             f'Unsupported ndim={ndim}'
             )
 
-    # two-dimensional ➜ DataFrame
+    # two-dimensional → DataFrame
     if ndim == 2:
         return coerce_dataframe(data)
 
     s = coerce_series(data)
 
-    # one-dimensional ➜ Series
+    # one-dimensional → Series
     if ndim == 1:
         return s
 
-    # zero dimensions ➜ scalar
+    # zero dimensions → scalar
     if ndim == 0:
         if len(s) == 1:
             return s.iat[0]

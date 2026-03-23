@@ -64,9 +64,9 @@ def delimit_iterable(
     delimiter : str
         String used to separate values.
     quotes : str | None
-        • 'single' ➜ each element is encased in single quotes
-        • 'double' ➜ each element is encased in double quotes
-        • None ➜ No action is taken
+        • 'single' → each element is encased in single quotes
+        • 'double' → each element is encased in double quotes
+        • None → No action is taken
     encase : bool
         If True, the return value is encased in parenthesis.
 
