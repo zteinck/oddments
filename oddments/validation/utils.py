@@ -1,10 +1,11 @@
 import numpy as np
+from collections import Counter
 
 
 def validate_value(
     value,
     types,
-    name=None,
+    name='value',
     finite=False,
     min_value=None,
     max_value=None,
@@ -56,31 +57,59 @@ def validate_value(
     ------------
     None
     '''
+
     if none_ok and value is None:
         return
 
-    if name is None:
-        name = 'value'
+    # encase variable names in single quotes but not descriptions
+    parts = name.strip().split()
+    name = ' '.join(parts)
+    if len(parts) == 1:
+        name = f"'{name}'"
 
     if not isinstance(types, tuple):
         types = (types,)
 
     if not isinstance(value, types):
-        type_names = [f'<{x.__name__}>' for x in types]
-        type_names = f"{', '.join(type_names[:-1])} or {type_names[-1]}" \
-                     if len(type_names) > 1 else type_names[0]
-        value_type = f'<{type(value).__name__}>'
+        all_types = types + (type(value),)
+        type_counts =  Counter(x.__name__ for x in all_types)
+
+        type_names = []
+        for x in all_types:
+            type_name = x.__name__
+            if type_counts[type_name] > 1:
+                type_name = (
+                    x.__module__.split('.')[0]
+                    + '.' + type_name
+                    )
+            type_names.append(f'<{type_name}>')
+
+        value_type_name = type_names.pop()
+
+        type_names = (
+            (', '.join(type_names[:-1] + [''])
+            + 'or ' + type_names[-1])
+            if len(type_names) > 1
+            else type_names[0]
+            )
+
         raise TypeError(
-            f'{name!r} must be a {type_names}, '
-            f'got: {value_type}.'
+            f'{name} must be a {type_names}, '
+            f'got: {value_type_name}.'
             )
 
     if blacklist is not None:
         if isinstance(blacklist, str):
             blacklist = [blacklist]
+
+        try:
+            blacklist = set(blacklist)
+        except TypeError:
+            pass
+
         if value in blacklist:
             raise ValueError(
-                f'{name!r} cannot be in {blacklist}, '
+                f'{name} cannot be in {blacklist}, '
                 f'got: {value!r}.'
                 )
 
@@ -94,27 +123,32 @@ def validate_value(
             ]
 
         if typed_whitelist:
+            try:
+                typed_whitelist = set(typed_whitelist)
+            except TypeError:
+                pass
+
             if value in typed_whitelist:
                 return
 
             raise ValueError(
-                f'{name!r} must be in {whitelist}, '
+                f'{name} must be in {whitelist}, '
                 f'got: {value!r}.'
                 )
 
     if not empty_ok and len(value) == 0:
         raise ValueError(
-            f"{name!r} cannot be empty."
+            f"{name} cannot be empty."
             )
 
     if finite:
         if not np.isfinite(value):
             raise TypeError(
-                f'{name!r} must be finite, '
+                f'{name} must be finite, '
                 f'got: {value!r}.'
                 )
 
-    msg = f"{name!r} must be {{0}} {{1}}, got: {value!r}"
+    msg = f"{name} must be {{0}} {{1}}, got: {value!r}"
 
     if min_value is not None:
         symbol = None
@@ -123,7 +157,9 @@ def validate_value(
         if not min_inclusive and value <= min_value:
             symbol = '>'
         if symbol is not None:
-            raise ValueError(msg.format(symbol, min_value))
+            raise ValueError(
+                msg.format(symbol, min_value)
+                )
 
     if max_value is not None:
         symbol = None
@@ -132,4 +168,6 @@ def validate_value(
         if not max_inclusive and value >= max_value:
             symbol = '<'
         if symbol is not None:
-            raise ValueError(msg.format(symbol, max_value))
+            raise ValueError(
+                msg.format(symbol, max_value)
+                )
