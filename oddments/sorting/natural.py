@@ -1,5 +1,31 @@
 import re
 
+_RE_DIGITS = re.compile(r'([0-9]+)')
+
+
+def _natural_sort_key(element):
+    '''
+    Description
+    ------------
+    Splits the string representation of an element into a list of numeric and
+    non-numeric tokens. (e.g. 'z23a' → ['z', 23, 'a'])
+
+    Parameters
+    ------------
+    element : any
+        Array element.
+
+    Returns
+    ------------
+    tokens : list
+        Sequence of alphanumeric tokens where numeric substrings are cast as
+        integers.
+    '''
+
+    parts = _RE_DIGITS.split(str(element))
+    tokens = [int(x) if x.isdigit() else x for x in parts]
+    return tokens
+
 
 def natural_sort(array):
     '''
@@ -20,20 +46,7 @@ def natural_sort(array):
     Returns
     ------------
     sorted : array-like
-        Sorted array.
+        Naturally sorted array.
     '''
 
-    def alphanumeric_key(element):
-        ''' converts string into a list of string and number chunks
-            (e.g. 'z23a' -> ['z', 23, 'a']) '''
-
-        def try_int(x):
-            try:
-                return int(x)
-            except (ValueError, TypeError):
-                return x
-
-        parts = re.split(r'([0-9]+)', str(element))
-        return list(map(try_int, parts))
-
-    return sorted(array, key=alphanumeric_key)
+    return sorted(array, key=_natural_sort_key)
