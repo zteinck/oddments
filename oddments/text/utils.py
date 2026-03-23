@@ -33,7 +33,12 @@ def add_border(text, width=100, fixed_width=False, align='left'):
         Text enclosed in a border.
     '''
     lines = wrap_text(' '.join(text.split()), width)
-    max_width = width if fixed_width else len(max(lines, key=len))
+
+    max_width = (
+        width
+        if fixed_width
+        else len(max(lines, key=len))
+        )
 
     validate_value(
         value=align,
