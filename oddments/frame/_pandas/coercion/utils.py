@@ -1,8 +1,9 @@
 from functools import wraps
+import polars as pl
 import pandas as pd
 import numpy as np
 
-from ...validation import validate_value
+from ....validation import validate_value
 
 
 def _validate_array_like(data):
@@ -176,6 +177,9 @@ def coerce_series(data, _ndim):
                 )
         return data.iloc[:, 0]
 
+    elif isinstance(data, pl.DataFrame):
+        return data.to_series()
+
     elif isinstance(data, dict):
         n_keys = len(data)
         if n_keys == 0: # empty dictionary
@@ -213,6 +217,12 @@ def coerce_dataframe(data, _ndim):
 
     elif isinstance(data, pd.Index):
         return data.to_frame(index=False)
+
+    elif isinstance(data, pl.DataFrame):
+        return data.to_pandas()
+
+    elif isinstance(data, pl.Series):
+        return data.to_frame().to_pandas()
 
     elif isinstance(data, dict) and len(data) > 0:
         objs = [

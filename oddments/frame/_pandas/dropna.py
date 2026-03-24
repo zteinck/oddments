@@ -1,12 +1,12 @@
 import numpy as np
 
-from ..validation import validate_value
-from .coercion import with_coerce_series
+from ...validation import validate_value
+from .coercion import apply_coerce_series
 from .indexing import verify_index_values
 
 
-@with_coerce_series
-def trim_na(
+@apply_coerce_series
+def _trim_nulls_with_pandas(
     s,
     which='both',
     inf_as_na=False,

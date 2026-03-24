@@ -1,5 +1,5 @@
-from ...iteration import ensure_list
-from ...validation import validate_value
+from ....iteration import ensure_list
+from ....validation import validate_value
 from ..decorators import validate_pandas_objs
 from .utils import get_index_names, has_named_index
 
@@ -62,11 +62,11 @@ def verify_index_values(obj):
     ''' verify index values do not contain NaNs '''
     for level, name in enumerate(list(obj.index.names)):
         if obj.index.get_level_values(name).isna().any():
-            label = f'level {level}'
+            alias = f'level {level}'
             if name is not None:
-                label += f' ({name!r})'
+                alias += f' ({name!r})'
             raise ValueError(
-                f'NaNs detected in {label} index values.'
+                f'NaNs detected in {alias} index values.'
                 )
 
 

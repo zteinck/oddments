@@ -1,6 +1,58 @@
 import pandas as pd
+import numpy as np
 
-from .decorators import purge_whitespace
+from .coercion import preserve_input_type
+
+
+@preserve_input_type
+def _purge_whitespace_with_pandas(df):
+
+    def strip_or_skip(x):
+        try:
+            x = x.strip()
+            if x == '':
+                return np.nan
+        except:
+            pass
+
+        return x
+
+
+    # clean column names by trimming leading/trailing whitespace and
+    # removing new lines and consecutive spaces
+    renames = {
+        k: ' '.join(k.split())
+        for k in df.columns
+        if isinstance(k, str)
+        }
+
+    df = df.rename(columns=renames)
+
+    # replace None with np.nan
+    for k in df.columns:
+        try:
+            df[k] = df[k].fillna(np.nan)
+        except:
+            pass
+
+    # trim leading/trailing whitespace and replace whitespace-only values
+    # with NaN
+    for k in df.select_dtypes(
+        include=['object','str']
+        ).columns:
+        # df[k] = df[k].replace(
+        #     to_replace=r'^\s*$',
+        #     value=np.nan,
+        #     regex=True
+        #     )
+
+        # using the vectorized string method str.strip() is faster but
+        # object-type columns can have mixed data types
+        df[k] = df[k].map(strip_or_skip) #.str.strip()
+
+    # df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+
+    return df
 
 
 def columns_apply(df, func, inplace=False):
@@ -41,17 +93,18 @@ def column_name_is_datelike(name):
 def infer_data_types(obj):
     ''' infers the appropriate data type for all columns in the DataFrame '''
 
-    @purge_whitespace
     def preprocess_obj(obj):
         if isinstance(obj, pd.DataFrame):
-            return obj.copy(deep=True)
+            out = obj.copy(deep=True)
         elif isinstance(obj, pd.Series):
-            return obj.to_frame().copy(deep=True)
+            out = obj.to_frame().copy(deep=True)
         else:
             raise TypeError(
                 "'obj' argument type not supported: "
                 f"{type(obj).__name__}"
                 )
+        return _purge_whitespace_with_pandas(out)
+
 
     df = preprocess_obj(obj)
 

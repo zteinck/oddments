@@ -74,7 +74,7 @@ def _coercion_handler(
     return out
 
 
-def with_coerce_series(func):
+def apply_coerce_series(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -88,7 +88,7 @@ def with_coerce_series(func):
     return wrapper
 
 
-def with_coerce_dataframe(func):
+def apply_coerce_dataframe(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):

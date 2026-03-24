@@ -1,6 +1,6 @@
+from .frame import *
 from .iteration import *
 from .mixins import *
-from .pandas import *
 from .sorting import *
 from .text import *
 from .validation import *

@@ -11,17 +11,17 @@ from .combine import (
 from .decorators import (
     ignore_nan,
     inplace_wrapper,
-    purge_whitespace,
     )
 
-from .dropna import trim_na
+from .dropna import _trim_nulls_with_pandas
 
 from .dupes import (
     drop_duplicates,
-    verify_unique,
+    _assert_unique_with_pandas,
     )
 
 from .utils import (
+    _purge_whitespace_with_pandas,
     columns_apply,
     column_name_is_datelike,
     infer_data_types,

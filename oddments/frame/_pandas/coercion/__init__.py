@@ -1,6 +1,6 @@
 from .decorators import (
-    with_coerce_dataframe,
-    with_coerce_series,
+    apply_coerce_dataframe,
+    apply_coerce_series,
     preserve_input_type,
     )
 

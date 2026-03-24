@@ -1,8 +1,8 @@
 import pandas as pd
 
-from ..validation import validate_value
+from ...validation import validate_value
 from .decorators import validate_pandas_objs
-from .dupes import verify_unique
+from .dupes import _assert_unique_with_pandas
 
 from .indexing import (
     get_index_names,
@@ -138,9 +138,9 @@ def _merge(left, right, _join, **kwargs):
                 if x not in shared_keys
                 ]
 
-    verify_unique(
+    _assert_unique_with_pandas(
         pd.Series(left_cols + right_cols, name='name'),
-        label='left & right column name',
+        alias='left & right column name',
         column_values=True,
         )
 
@@ -205,7 +205,7 @@ def merge(objs, _join=False, **kwargs):
     dupes_ok = {}
 
     for pos, obj in enumerate(objs):
-        label = 'left' if pos == 0 else 'right'
+        alias = 'left' if pos == 0 else 'right'
 
         if isinstance(obj, pd.Series):
             obj = obj.to_frame()
@@ -213,32 +213,32 @@ def merge(objs, _join=False, **kwargs):
         obj = obj.copy(deep=True)
 
         if not _join:
-            join_keys = params[f'{label}_on']
+            join_keys = params[f'{alias}_on']
             if has_named_index(obj):
                 obj.reset_index(inplace=True)
 
-        if label not in dupes_ok:
-            key = f'{label}_dupes_ok'
+        if alias not in dupes_ok:
+            key = f'{alias}_dupes_ok'
             if _join and key in params:
                 raise NotImplementedError(
                     f'{key!r} parameter is not supported for '
                     'join operations, only during merge.'
                     )
-            dupes_ok[label] = params.pop(key, not _join)
+            dupes_ok[alias] = params.pop(key, not _join)
 
         subset = (
             False
-            if _join or dupes_ok[label]
+            if _join or dupes_ok[alias]
             else join_keys[:]
             )
 
-        verify_unique(
+        _assert_unique_with_pandas(
             obj=obj,
-            label=label,
+            alias=alias,
             column_names=True,
             column_values=subset,
             index_names=True,
-            index_values=_join and not dupes_ok[label],
+            index_values=_join and not dupes_ok[alias],
             include_index=False,
             dropna=False,
             )
@@ -380,9 +380,9 @@ def hconcat(objs, index=None, **kwargs):
     if index is not None:
         df = df.reindex(index)
 
-    verify_unique(
+    _assert_unique_with_pandas(
         df,
-        label='hconcat result',
+        alias='hconcat result',
         column_names=True,
         index_names=True,
         index_values=True,

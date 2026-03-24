@@ -1,7 +1,7 @@
 from functools import wraps
 import pandas as pd
 
-from ..validation import validate_value
+from ...validation import validate_value
 from .coercion import preserve_input_type
 
 from .indexing import (
@@ -87,9 +87,9 @@ def drop_duplicates(df, **kwargs):
 
 @preserve_input_type
 @_resolve_include_index
-def verify_unique(
+def _assert_unique_with_pandas(
     df,
-    label=None,
+    alias=None,
     column_names=True,
     column_values=False,
     index_names=True,
@@ -107,7 +107,7 @@ def verify_unique(
     ------------
     obj : pd.DataFrame | pd.Series
         Pandas object to inspect for duplicates.
-    label : str | None
+    alias : str | None
         Display name for error messages.
     column_names : bool
         If True, check for duplicates among the column names.
@@ -154,17 +154,17 @@ def verify_unique(
         raise ValueError(f'{msg}:\n\n{dupes}\n')
 
 
-    # default label
-    if label is None:
-        label = 'df'
+    # default alias
+    if alias is None:
+        alias = 'df'
 
     # standard error message verbiage
-    msg = f'Duplicates detected in {label}'
+    msg = f'Duplicates detected in {alias}'
 
     # check for invalid column names (NaN or None)
     if df.columns.isna().any():
         raise ValueError(
-            f'NaNs detected in {label} column names.'
+            f'NaNs detected in {alias} column names.'
             )
 
     # check for duplicate column names
@@ -184,7 +184,7 @@ def verify_unique(
             # check for conflicts between index and column names
             check(
                 idx_names + col_names,
-                f'Conflicts detected between {label} '
+                f'Conflicts detected between {alias} '
                 'index and column names'
                 )
 

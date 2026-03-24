@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ...validation import validate_value
+from ....validation import validate_value
 
 
 def get_index_names(obj, simplify=False, drop_none=False):
