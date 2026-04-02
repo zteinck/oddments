@@ -1,102 +1,12 @@
-import polars as pl
-import polars.selectors as cs
 from functools import wraps
 
-from ...validation import validate_value
+import polars as pl
+import polars.selectors as cs
 
-
-def sanitize_subset(
-    subset,
-    superset=None,
-    subset_name='subset',
-    superset_name='superset'
-    ):
-    '''
-    Description
-    ------------
-    Sanitizes a subset of column names by ensuring it is a list of unique
-    strings and optionally validates membership against a superset.
-
-    Parameters
-    ------------
-    subset : None | str | array-like[str]
-        Subset of column names. If None, the superset is returned.
-    superset : None | str | array-like[str]
-        Superset of column names.
-    subset_name : str
-        Subset name used in error messages.
-    superset_name : str
-        Superset name used in error messages.
-
-    Returns
-    ------------
-    subset : list
-        Sanitized subset of column names.
-    '''
-
-    def sanitize(value, name):
-
-        validate_value(
-            value=value,
-            name=name,
-            types=(str, list, tuple, set),
-            none_ok=True,
-            )
-
-        if value is None:
-            return None
-
-        if isinstance(value, str):
-            return [value]
-
-        s = pl.Series(
-            name=name,
-            values=value,
-            dtype=str,
-            strict=True,
-            nan_to_null=True,
-            )
-
-        out = (
-            s
-            .drop_nulls()
-            .unique(maintain_order=True)
-            .to_list()
-            )
-
-        validate_value(
-            value=out,
-            name=f'sanitized {name!r}',
-            types=list,
-            empty_ok=False,
-            )
-
-        return out
-
-
-    subset = sanitize(subset, subset_name)
-    superset = sanitize(superset, superset_name)
-
-    if subset is None:
-        return superset
-
-    if superset is None:
-        return subset
-
-    whitelist = set(superset)
-
-    extra_cols = [
-        col for col in subset
-        if col not in whitelist
-        ]
-
-    if extra_cols:
-        raise ValueError(
-            f'{subset_name} includes column names not '
-            f'found in {superset_name}: {extra_cols}'
-            )
-
-    return subset
+from ...validation import (
+    validate_value,
+    sanitize_subset,
+    )
 
 
 def _preserve_input_type(func):

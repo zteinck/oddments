@@ -7,4 +7,4 @@ from .utils import (
     )
 
 from ._pandas import *
-from ._polars import sanitize_subset
+from ._polars import *
