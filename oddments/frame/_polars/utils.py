@@ -110,8 +110,8 @@ def _preserve_input_type(func):
     nan_to_null : bool
         If True, NaN values are replaced with None in the query plan before
         being passed to the decorated function.
-    alias : None | str
-        Optional alias used to identify 'obj' in error messages.
+    name : None | str
+        Optional name used to identify 'obj' in error messages.
     kwargs : dict
         Keyword arguments passed to the decorated function.
 
@@ -127,7 +127,7 @@ def _preserve_input_type(func):
         obj,
         subset=None,
         nan_to_null=False,
-        alias=None,
+        name=None,
         **kwargs
         ):
 
@@ -179,23 +179,23 @@ def _preserve_input_type(func):
         if nan_to_null:
             lf = lf.fill_nan(None)
 
-        # alias housekeeping
+        # name housekeeping
         validate_value(
-            value=alias,
-            name='alias',
+            value=name,
+            name='name',
             types=str,
             none_ok=True,
             empty_ok=False,
             )
 
-        if alias is None:
-            alias = input_type.__name__
+        if name is None:
+            name = input_type.__name__
 
         # call decorated function
         out = func(
             lf=lf,
             subset=subset,
-            alias=alias,
+            name=name,
             **kwargs
             )
 
@@ -241,7 +241,7 @@ def _preserve_input_type(func):
 def _assert_unique_with_polars(
     lf,
     subset,
-    alias,
+    name,
     null_policy='error',
     ):
     '''
@@ -297,7 +297,7 @@ def _assert_unique_with_polars(
 
         if not null_counts.is_empty():
             raise ValueError(
-                f'Nulls detected in {alias}:\n\n{null_counts}'
+                f'Nulls detected in {name}:\n\n{null_counts}'
                 )
 
     elif null_policy == 'exclude':
@@ -320,7 +320,7 @@ def _assert_unique_with_polars(
     if not dupe_counts.is_empty():
         raise ValueError(
             'Duplicates detected in '
-            f'{alias}:\n\n{dupe_counts}'
+            f'{name}:\n\n{dupe_counts}'
             )
 
 
@@ -328,7 +328,7 @@ def _assert_unique_with_polars(
 def _trim_nulls_with_polars(
     lf,
     subset,
-    alias,
+    name,
     which='both',
     how='any',
     allow_nulls=False,
@@ -412,7 +412,7 @@ def _trim_nulls_with_polars(
         if not sample.is_empty():
             raise ValueError(
                 'Remaining nulls detected in '
-                f'{alias}:\n\n{sample}'
+                f'{name}:\n\n{sample}'
                 )
 
     return lf
