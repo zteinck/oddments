@@ -5,7 +5,12 @@ from functools import wraps
 from ...validation import validate_value
 
 
-def sanitize_subset(subset, superset=None, name='subset'):
+def sanitize_subset(
+    subset,
+    superset=None,
+    subset_name='subset',
+    superset_name='superset'
+    ):
     '''
     Description
     ------------
@@ -14,12 +19,14 @@ def sanitize_subset(subset, superset=None, name='subset'):
 
     Parameters
     ------------
-    subset : None | array-like
+    subset : None | str | array-like[str]
         Subset of column names. If None, the superset is returned.
-    superset : None | array-like
+    superset : None | str | array-like[str]
         Superset of column names.
-    name : str
-        Name of the subset used in error messages.
+    subset_name : str
+        Subset name used in error messages.
+    superset_name : str
+        Superset name used in error messages.
 
     Returns
     ------------
@@ -67,8 +74,8 @@ def sanitize_subset(subset, superset=None, name='subset'):
         return out
 
 
-    subset = sanitize(subset, name)
-    superset = sanitize(superset, 'superset')
+    subset = sanitize(subset, subset_name)
+    superset = sanitize(superset, superset_name)
 
     if subset is None:
         return superset
@@ -85,8 +92,8 @@ def sanitize_subset(subset, superset=None, name='subset'):
 
     if extra_cols:
         raise ValueError(
-            'Subset includes column names not '
-            f'found in superset: {extra_cols}'
+            f'{subset_name} includes column names not '
+            f'found in {superset_name}: {extra_cols}'
             )
 
     return subset
