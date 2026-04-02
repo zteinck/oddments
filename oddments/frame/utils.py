@@ -1,4 +1,5 @@
 from functools import wraps
+
 import pandas as pd
 import polars as pl
 
@@ -21,8 +22,17 @@ def _dispatch(func):
 
     @wraps(func)
     def wrapper(obj, *args, **kwargs):
-        polars_types = (pl.DataFrame, pl.Series, pl.LazyFrame)
-        pandas_types = (pd.DataFrame, pd.Series)
+
+        polars_types = (
+            pl.LazyFrame,
+            pl.DataFrame,
+            pl.Series,
+            )
+
+        pandas_types = (
+            pd.DataFrame,
+            pd.Series,
+            )
 
         validate_value(
             value=obj,
