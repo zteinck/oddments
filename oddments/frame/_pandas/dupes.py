@@ -1,4 +1,5 @@
 from functools import wraps
+
 import pandas as pd
 
 from ...validation import validate_value

@@ -1,6 +1,6 @@
 from functools import wraps
+
 import pandas as pd
-import numpy as np
 
 from ...iteration import ensure_list
 from ...validation import validate_value
