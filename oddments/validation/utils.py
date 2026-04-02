@@ -3,6 +3,8 @@ from collections import Counter
 import numpy as np
 import polars as pl
 
+from ..natural import natural_join
+
 
 def validate_value(
     value,
@@ -87,13 +89,7 @@ def validate_value(
             type_names.append(f'<{type_name}>')
 
         value_type_name = type_names.pop()
-
-        type_names = (
-            (', '.join(type_names[:-1] + [''])
-            + 'or ' + type_names[-1])
-            if len(type_names) > 1
-            else type_names[0]
-            )
+        type_names = natural_join(type_names, 'or')
 
         raise TypeError(
             f'{name} must be a {type_names}, '

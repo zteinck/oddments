@@ -1,7 +1,7 @@
 from .frame import *
 from .iteration import *
 from .mixins import *
-from .sorting import *
+from .natural import *
 from .text import *
 from .validation import *
 
