@@ -1,11 +1,11 @@
 from .decorators import (
-    apply_coerce_dataframe,
-    apply_coerce_series,
+    apply_to_pandas_frame,
+    apply_to_pandas_series,
     preserve_input_type,
     )
 
 from .utils import (
-    coerce_dataframe,
-    coerce_series,
+    to_pandas_frame,
+    to_pandas_series,
     coerce_ndim,
     )

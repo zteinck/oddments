@@ -162,7 +162,7 @@ def _coercion_wrapper(func):
 
 
 @_coercion_wrapper
-def coerce_series(data, _ndim):
+def to_pandas_series(data, _ndim):
     ''' coerce data to pd.Series '''
 
     if isinstance(data, pd.Series):
@@ -190,7 +190,7 @@ def coerce_series(data, _ndim):
                 f'than 1 key, got {n_keys:,} keys.'
                 )
         key, value = next(iter(data.items()))
-        return coerce_series(value).rename(key)
+        return to_pandas_series(value).rename(key)
 
     if _ndim == 0: # single value
         return pd.Series([data])
@@ -206,7 +206,7 @@ def coerce_series(data, _ndim):
 
 
 @_coercion_wrapper
-def coerce_dataframe(data, _ndim):
+def to_pandas_frame(data, _ndim):
     ''' coerce data to pd.DataFrame '''
 
     if isinstance(data, pd.DataFrame):
@@ -218,6 +218,9 @@ def coerce_dataframe(data, _ndim):
     elif isinstance(data, pd.Index):
         return data.to_frame(index=False)
 
+    elif isinstance(data, pl.LazyFrame):
+        return data.collect()
+
     elif isinstance(data, pl.DataFrame):
         return data.to_pandas()
 
@@ -226,7 +229,7 @@ def coerce_dataframe(data, _ndim):
 
     elif isinstance(data, dict) and len(data) > 0:
         objs = [
-            coerce_series(v).rename(k)
+            to_pandas_series(v).rename(k)
             for k, v in data.items()
             ]
         return pd.concat(
@@ -236,7 +239,7 @@ def coerce_dataframe(data, _ndim):
             )
 
     if _ndim <= 1: # single value or one-dimensional
-        return coerce_series(
+        return to_pandas_series(
             data=data,
             default_name=None
             ).to_frame()
@@ -279,9 +282,9 @@ def coerce_ndim(data, ndim):
 
     # two-dimensional → DataFrame
     if ndim == 2:
-        return coerce_dataframe(data)
+        return to_pandas_frame(data)
 
-    s = coerce_series(data)
+    s = to_pandas_series(data)
 
     # one-dimensional → Series
     if ndim == 1:

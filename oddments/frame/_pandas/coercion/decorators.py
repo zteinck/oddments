@@ -2,8 +2,8 @@ from functools import wraps
 import pandas as pd
 
 from .utils import (
-    coerce_dataframe,
-    coerce_series,
+    to_pandas_frame,
+    to_pandas_series,
     coerce_ndim,
     )
 
@@ -74,12 +74,12 @@ def _coercion_handler(
     return out
 
 
-def apply_coerce_series(func):
+def apply_to_pandas_series(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
         return _coercion_handler(
-            coerce_series,
+            to_pandas_series,
             func,
             *args,
             **kwargs
@@ -88,12 +88,12 @@ def apply_coerce_series(func):
     return wrapper
 
 
-def apply_coerce_dataframe(func):
+def apply_to_pandas_frame(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
         return _coercion_handler(
-            coerce_dataframe,
+            to_pandas_frame,
             func,
             *args,
             **kwargs
@@ -121,7 +121,7 @@ def preserve_input_type(func):
         is_series = check_if_series(obj)
 
         out = func(
-            coerce_dataframe(obj),
+            to_pandas_frame(obj),
             *args,
             **kwargs
             )
@@ -130,9 +130,9 @@ def preserve_input_type(func):
             return
 
         coerce = (
-            coerce_series
+            to_pandas_series
             if is_series
-            else coerce_dataframe
+            else to_pandas_frame
             )
 
         return coerce(out)

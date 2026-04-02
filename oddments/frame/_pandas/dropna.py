@@ -1,11 +1,11 @@
 import numpy as np
 
 from ...validation import validate_value
-from .coercion import apply_coerce_series
+from .coercion import apply_to_pandas_series
 from .indexing import verify_index_values
 
 
-@apply_coerce_series
+@apply_to_pandas_series
 def _trim_nulls_with_pandas(
     s,
     which='both',
