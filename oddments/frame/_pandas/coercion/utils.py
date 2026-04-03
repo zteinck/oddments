@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 
 from ....validation import validate_value
+from ..._constants import POLARS_TYPES
 
 
 def _validate_array_like(data):
@@ -137,11 +138,23 @@ def _coercion_wrapper(func):
         ndim : int
             Only returned if 'return_ndim' is True.
         '''
+
         validate_value(
             value=return_ndim,
             name='return_ndim',
             types=bool,
             )
+
+        # intercept polars objects
+        is_polars = isinstance(data, POLARS_TYPES)
+
+        if is_polars:
+            data = data.clone()
+
+            if isinstance(data, pl.LazyFrame):
+                data = data.collect()
+
+            data = data.to_pandas()
 
         ndim = _get_data_dimensions(data)
 
@@ -177,9 +190,6 @@ def to_pandas_series(data, _ndim):
                 f'converted to Series, got {n_cols} columns.'
                 )
         return data.iloc[:, 0]
-
-    elif isinstance(data, pl.DataFrame):
-        return data.to_series()
 
     elif isinstance(data, dict):
         n_keys = len(data)
@@ -218,15 +228,6 @@ def to_pandas_frame(data, _ndim):
 
     elif isinstance(data, pd.Index):
         return data.to_frame(index=False)
-
-    elif isinstance(data, pl.LazyFrame):
-        return data.collect()
-
-    elif isinstance(data, pl.DataFrame):
-        return data.to_pandas()
-
-    elif isinstance(data, pl.Series):
-        return data.to_frame().to_pandas()
 
     elif isinstance(data, dict) and len(data) > 0:
         objs = [

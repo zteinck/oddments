@@ -2,6 +2,7 @@ import polars as pl
 import pandas as pd
 
 from ...validation import validate_value
+from .._constants import *
 
 from .._pandas import (
     _assert_unique_with_pandas,
@@ -31,24 +32,13 @@ def to_polars_frame(obj, name='obj', lazy=False):
     '''
 
     # validate object type
-    polars_types = (
-        pl.LazyFrame,
-        pl.DataFrame,
-        pl.Series,
-        )
-
-    pandas_types = (
-        pd.DataFrame,
-        pd.Series
-        )
-
     validate_value(
         value=obj,
         name=name,
-        types=polars_types + pandas_types
+        types=POLARS_TYPES + PANDAS_TYPES
         )
 
-    is_polars = isinstance(obj, polars_types)
+    is_polars = isinstance(obj, POLARS_TYPES)
 
     # create a copy of the object
     obj = (

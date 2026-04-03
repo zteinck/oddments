@@ -1,9 +1,7 @@
 from functools import wraps
 
-import pandas as pd
-import polars as pl
-
 from ..validation import validate_value
+from ._constants import *
 
 from ._pandas import (
     _assert_unique_with_pandas,
@@ -23,26 +21,15 @@ def _dispatch(func):
     @wraps(func)
     def wrapper(obj, *args, **kwargs):
 
-        polars_types = (
-            pl.LazyFrame,
-            pl.DataFrame,
-            pl.Series,
-            )
-
-        pandas_types = (
-            pd.DataFrame,
-            pd.Series,
-            )
-
         validate_value(
             value=obj,
             name='obj',
-            types=polars_types + pandas_types,
+            types=POLARS_TYPES + PANDAS_TYPES,
             )
 
         lib = (
             'polars'
-            if isinstance(obj, polars_types)
+            if isinstance(obj, POLARS_TYPES)
             else 'pandas'
             )
 
