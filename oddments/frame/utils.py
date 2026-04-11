@@ -27,14 +27,27 @@ def _dispatch(func):
             types=POLARS_TYPES + PANDAS_TYPES,
             )
 
-        lib = (
-            'polars'
-            if isinstance(obj, POLARS_TYPES)
-            else 'pandas'
+        keys = (
+            'assert_unique',
+            'purge_whitespace',
+            'trim_nulls',
             )
 
-        func_name = f'_{func.__name__}_with_{lib}'
-        out = globals()[func_name](obj, *args, **kwargs)
+        if isinstance(obj, POLARS_TYPES):
+            values = (
+                _assert_unique_with_polars,
+                _purge_whitespace_with_polars,
+                _trim_nulls_with_polars,
+                )
+        else:
+            values = (
+                _assert_unique_with_pandas,
+                _purge_whitespace_with_pandas,
+                _trim_nulls_with_pandas,
+                )
+
+        func_map = dict(zip(keys, values, strict=True))
+        out = func_map[func.__name__](obj, *args, **kwargs)
         return out
 
     return wrapper
