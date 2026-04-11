@@ -208,7 +208,7 @@ def _assert_unique_with_polars(
                 value_name=freq
                 )
             .filter(pl.col(freq) > 0)
-            .sort(freq, descending=True)
+            .top_k(5, by=freq)
             .collect()
             )
 
@@ -229,7 +229,7 @@ def _assert_unique_with_polars(
         .group_by(subset)
         .len()
         .filter(pl.col(freq) > 1)
-        .sort(freq, descending=True)
+        .top_k(5, by=freq)
         .select([*subset, freq])
         .collect()
         )
