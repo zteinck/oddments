@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oddments"
-version = "0.8.1"
+version = "0.9.0"
 description = "Collection of general-purpose utilities."
 authors = ["Zachary Einck <zacharyeinck@gmail.com>"]
 license = "MIT"
@@ -9,10 +9,11 @@ repository = "https://github.com/zteinck/oddments"
 homepage = "https://github.com/zteinck/oddments"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 numpy = "*"
 pandas = "*"
 polars = "*"
+pyarrow = "*"
 
 [build-system]
 requires = ["poetry-core"]
