@@ -1,56 +1,27 @@
+import polars as pl
 import pandas as pd
-import numpy as np
 
+from .._polars import _purge_whitespace_with_polars
 from .coercion import preserve_input_type
+from .indexing import get_index_names
 
 
 @preserve_input_type
 def _purge_whitespace_with_pandas(df):
+    index_names = get_index_names(df, drop_none=True)
+    include_index = len(index_names) > 0
 
-    def strip_or_skip(x):
-        try:
-            x = x.strip()
-            if x == '':
-                return np.nan
-        except:
-            pass
+    df = pl.from_pandas(
+        data=df,
+        nan_to_null=True,
+        include_index=include_index
+        )
 
-        return x
+    df = _purge_whitespace_with_polars(df)
+    df = df.to_pandas()
 
-
-    # clean column names by trimming leading/trailing whitespace and
-    # removing new lines and consecutive spaces
-    renames = {
-        k: ' '.join(k.split())
-        for k in df.columns
-        if isinstance(k, str)
-        }
-
-    df = df.rename(columns=renames)
-
-    # replace None with np.nan
-    for k in df.columns:
-        try:
-            df[k] = df[k].fillna(np.nan)
-        except:
-            pass
-
-    # trim leading/trailing whitespace and replace whitespace-only values
-    # with NaN
-    for k in df.select_dtypes(
-        include=['object','str']
-        ).columns:
-        # df[k] = df[k].replace(
-        #     to_replace=r'^\s*$',
-        #     value=np.nan,
-        #     regex=True
-        #     )
-
-        # using the vectorized string method str.strip() is faster but
-        # object-type columns can have mixed data types
-        df[k] = df[k].map(strip_or_skip) #.str.strip()
-
-    # df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+    if include_index:
+        df = df.set_index(index_names)
 
     return df
 
