@@ -1,6 +1,9 @@
 from textwrap import wrap as wrap_text
 
-from ..validation import validate_value
+from ..validation import Validator
+
+_SPACE_CHAR = ' '
+_NEW_LINE_CHAR = '\n'
 
 
 def add_border(text, width=100, fixed_width=False, align='left'):
@@ -29,10 +32,32 @@ def add_border(text, width=100, fixed_width=False, align='left'):
 
     Returns
     ------------
-    out : str
+    result : str
         Text enclosed in a border.
     '''
-    lines = wrap_text(' '.join(text.split()), width)
+    (
+    Validator(
+        types=bool
+        )
+    .validate(
+        fixed_width=fixed_width
+        )
+    )
+
+    (
+    Validator(
+        types=str,
+        whitelist=['left','right','center'],
+        )
+    .validate(
+        align=align
+        )
+    )
+
+    lines = wrap_text(
+        text=_SPACE_CHAR.join(text.split()),
+        width=width,
+        )
 
     max_width = (
         width
@@ -40,39 +65,46 @@ def add_border(text, width=100, fixed_width=False, align='left'):
         else len(max(lines, key=len))
         )
 
-    validate_value(
-        value=align,
-        name='align',
-        types=str,
-        whitelist=['left','right','center'],
-        )
-
     border_edge = '-' * (max_width + 2)
     top_border = '╭' + border_edge + '╮'
     bottom_border = '╰' + border_edge + '╯'
+    side_border = '|'
 
-    if align in 'left':
-        content = [
-            ('| ' + line + ''.join([' '] * (max_width - len(line))) + ' |')
-            for line in lines
-            ]
+    rows = []
 
-    elif align == 'right':
-        content = [
-            ('| ' + ''.join([' '] * (max_width - len(line))) + line + ' |')
-            for line in lines
-            ]
+    for line in lines:
+        total_pad = max_width - len(line)
 
-    elif align == 'center':
-        content = [
-            ('| ' + ''.join([' '] * ((max_width - len(line)) // 2)) + line +
-            ''.join([' '] * ((max_width - len(line) + 1) // 2)) + ' |')
-            for line in lines
-            ]
+        if align == 'left':
+            left_pad, right_pad = 0, total_pad
+        elif align == 'right':
+            left_pad, right_pad = total_pad, 0
+        else:
+            left_pad, right_pad = (
+                ((total_pad + x) // 2)
+                for x in (0, 1)
+                )
 
-    out = '\n'.join([top_border, '\n'.join(content), bottom_border])
+        left_pad, right_pad = (
+            ''.join([_SPACE_CHAR] * x)
+            for x in (left_pad, right_pad)
+            )
 
-    return out
+        row = _SPACE_CHAR.join((
+            side_border,
+            ''.join((left_pad, line, right_pad)),
+            side_border,
+            ))
+
+        rows.append(row)
+
+    result = _NEW_LINE_CHAR.join((
+        top_border,
+        _NEW_LINE_CHAR.join(rows),
+        bottom_border,
+        ))
+
+    return result
 
 
 def wrap_docstring(text, indents=0, indent_width=4, line_width=79):
@@ -94,18 +126,19 @@ def wrap_docstring(text, indents=0, indent_width=4, line_width=79):
 
     Returns
     ------------
-    wrapped : str
+    result : str
         Wrapped docstring text.
     '''
     indent_limit = line_width // indent_width
 
     if indents > indent_limit:
         raise ValueError(
-            f'Number of indents ({indents}) exceeds '
-            f'the limit ({indent_limit}).'
+            f'Number of indents ({indents}) exceeds the limit '
+            f'({indent_limit}).'
             )
 
-    text = ' '.join(text.split())
+    text = _SPACE_CHAR.join(text.split())
     width = line_width - indents * indent_width
     lines = wrap_text(text=text, width=width)
-    return '\n'.join(lines)
+    result = _NEW_LINE_CHAR.join(lines)
+    return result

@@ -1,6 +1,6 @@
 from functools import wraps
 
-from ..validation import validate_value
+from ..validation import Validator
 from ._constants import *
 
 from ._pandas import (
@@ -21,11 +21,14 @@ def _dispatch(func):
     @wraps(func)
     def wrapper(obj, *args, **kwargs):
 
-        validate_value(
-            value=obj,
-            name='obj',
-            types=POLARS_TYPES + PANDAS_TYPES,
+        (
+        Validator(
+            types=(POLARS_TYPES + PANDAS_TYPES)
             )
+        .validate(
+            obj=obj
+            )
+        )
 
         keys = (
             'assert_unique',
@@ -47,8 +50,8 @@ def _dispatch(func):
                 )
 
         func_map = dict(zip(keys, values, strict=True))
-        out = func_map[func.__name__](obj, *args, **kwargs)
-        return out
+        result = func_map[func.__name__](obj, *args, **kwargs)
+        return result
 
     return wrapper
 

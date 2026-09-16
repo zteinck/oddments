@@ -1,13 +1,12 @@
 from ....iteration import ensure_list
-from ....validation import validate_value
+from ....sentinels import UNSET
+from ....validation import Validator
 from ..decorators import validate_pandas_objs
 from .utils import get_index_names, has_named_index
 
-_SENTINEL = object()
-
 
 @validate_pandas_objs
-def verify_index_names(objs, expected=_SENTINEL, none_ok=True):
+def verify_index_names(objs, expected=UNSET, allow_none=True):
     '''
     Description
     ------------
@@ -20,7 +19,7 @@ def verify_index_names(objs, expected=_SENTINEL, none_ok=True):
     expected : list | str | None
         Expected index name(s). If not provided, any index names are allowed
         as long as they are identical across all objects.
-    none_ok : bool | None
+    allow_none : bool | None
         If False, an error is raised if any object has an unnamed index.
         Note: this parameter is ignored when 'expected' is provided.
 
@@ -28,7 +27,7 @@ def verify_index_names(objs, expected=_SENTINEL, none_ok=True):
     ------------
     None
     '''
-    has_expected = expected is not _SENTINEL
+    has_expected = expected is not UNSET
 
     if has_expected:
         expected = ensure_list(expected)
@@ -37,7 +36,7 @@ def verify_index_names(objs, expected=_SENTINEL, none_ok=True):
         msg = f'Object at position {pos}'
         names = get_index_names(obj)
 
-        if not (has_expected or none_ok or has_named_index(obj)):
+        if not (has_expected or allow_none or has_named_index(obj)):
             raise ValueError(
                 f'{msg} is missing a named index, got: {names}.'
                 )
@@ -88,12 +87,15 @@ def verify_index_monotonicity(obj, direction='increasing'):
     None
     '''
 
-    validate_value(
-        name='direction',
-        value=direction,
+    (
+    Validator(
         types=str,
-        whitelist=['increasing','decreasing']
+        whitelist=['increasing','decreasing'],
         )
+    .validate(
+        direction=direction
+        )
+    )
 
     is_valid = getattr(obj.index, f'is_monotonic_{direction}')
 

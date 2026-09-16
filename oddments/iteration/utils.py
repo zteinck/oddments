@@ -1,4 +1,4 @@
-from ..validation import validate_value
+from ..validation import Validator
 
 
 def try_get(obj, index=0, default=None):
@@ -21,11 +21,8 @@ def try_get(obj, index=0, default=None):
     element : any
         Retrieved element
     '''
-    validate_value(
-        value=index,
-        name='index',
-        types=int
-        )
+
+    Validator(types=int).validate(index=index)
 
     if obj is None:
         return default
@@ -109,7 +106,7 @@ def text_to_iterable(text, transform=str, delimiter='\n'):
 
     Returns
     ------------
-    out : list
+    result : list
         list if items in text file
     '''
     return [
@@ -153,16 +150,23 @@ def iter_window(
     include_index : bool
         if True, the index of the slice is also returned
     '''
-    n, start = len(iterable) - 1, -1
+    n = len(iterable) - 1
+    start = -1
 
-    for i, v in enumerate(iterable):
-        a, b = max(0, i - left), min(n, i + right)
+    for i, _ in enumerate(iterable):
+        a = max(0, i - left)
+        b = min(n, i + right)
 
         if step:
-            if left > 0 and i == n: a = max(start, 0)
-            if a < start: continue
+            if left > 0 and i == n:
+                a = max(start, 0)
+            if a < start:
+                continue
 
         subset = iterable[ a : b + 1 ]
-        if strict and len(subset) < left + right + 1: continue
+
+        if strict and len(subset) < left + right + 1:
+            continue
+
         start = b + 1
         yield (i, subset) if include_index else subset

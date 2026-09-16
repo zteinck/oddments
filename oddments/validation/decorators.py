@@ -1,24 +1,24 @@
 from functools import wraps
 
-from .utils import validate_value
+from .validator import Validator
 
 
-def validate_setter(call_func=False, **kwargs):
+def validate_on_set(call_wrapped=False, **kwargs):
     '''
     Description
     ------------
     Decorator for methods that are ultimately decorated by setters.
-    Validates the value being set via validate_value().
+    Validates the value being set via Validator().
 
     Parameters
     ------------
-    call_func : bool
+    call_wrapped : bool
         If True, the wrapped function is called with self and value arguments
         passed. Otherwise, a protected attribute is set mirroring func's name.
         This parameter is useful for those scenarios where custom logic needs
         to be applied before setting the protected attribute.
     kwargs : dict
-        keyword arguments passed to validate_value().
+        keyword arguments passed to Validator().
 
     Returns
     ------------
@@ -30,8 +30,11 @@ def validate_setter(call_func=False, **kwargs):
         @wraps(func)
         def wrapper(self, value):
             name = func.__name__
-            validate_value(value=value, name=name, **kwargs)
-            if call_func: return func(self, value)
+            Validator(**kwargs).validate(value, name)
+
+            if call_wrapped:
+                return func(self, value)
+
             setattr(self, '_' + name, value)
 
         return wrapper

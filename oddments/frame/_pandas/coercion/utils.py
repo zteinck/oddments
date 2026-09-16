@@ -4,17 +4,25 @@ import polars as pl
 import pandas as pd
 import numpy as np
 
-from ....validation import validate_value
+from ....validation import Validator
 from ..._constants import POLARS_TYPES
 
 
 def _validate_array_like(data):
     ''' raises an error if data is not array-like '''
-    validate_value(
-        value=data,
-        name='data',
-        types=(list, tuple, np.ndarray, pd.Index)
+    (
+    Validator(
+        types=(
+            list,
+            tuple,
+            np.ndarray,
+            pd.Index,
+            )
         )
+        .validate(
+            data=data
+            )
+    )
 
 
 def _get_data_dimensions(data):
@@ -83,13 +91,17 @@ def _apply_default_name(obj, default_name):
     obj : pd.Series | pd.DataFrame
         renamed object
     '''
-    validate_value(
-        value=default_name,
-        name='default_name',
+
+    (
+    Validator(
         types=str,
-        none_ok=True,
-        empty_ok=False
+        allow_none=True,
+        allow_empty=False,
         )
+    .validate(
+        default_name=default_name
+        )
+    )
 
     if default_name is None:
         return obj
@@ -133,16 +145,14 @@ def _coercion_wrapper(func):
 
         Returns
         ------------
-        out : pd.Series | pd.DataFrame
+        result : pd.Series | pd.DataFrame
             Input data represented as a pandas object.
         ndim : int
             Only returned if 'return_ndim' is True.
         '''
 
-        validate_value(
-            value=return_ndim,
-            name='return_ndim',
-            types=bool,
+        Validator(types=bool).validate(
+            return_ndim=return_ndim
             )
 
         # intercept polars objects
@@ -168,9 +178,9 @@ def _coercion_wrapper(func):
         if isinstance(data, (set, range)):
             data = list(data)
 
-        out = func(data, _ndim=ndim).copy(deep=True)
-        out = _apply_default_name(out, default_name)
-        return (out, ndim) if return_ndim else out
+        result = func(data, _ndim=ndim).copy(deep=True)
+        result = _apply_default_name(result, default_name)
+        return (result, ndim) if return_ndim else result
 
     return wrapper
 
@@ -268,14 +278,10 @@ def coerce_ndim(data, ndim):
 
     Returns
     ------------
-    out : pd.DataFrame | pd.Series | any (scalar)
+    result : pd.DataFrame | pd.Series | any (scalar)
         Input data represented as a pandas object or scalar.
     '''
-    validate_value(
-        value=ndim,
-        name='ndim',
-        types=int
-        )
+    Validator(types=int).validate(ndim=ndim)
 
     if not 0 <= ndim <= 2:
         raise NotImplementedError(

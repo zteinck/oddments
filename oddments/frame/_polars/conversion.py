@@ -1,7 +1,7 @@
 import polars as pl
 import pandas as pd
 
-from ...validation import validate_value
+from ...validation import Validator
 from .._constants import *
 
 from .._pandas import (
@@ -32,11 +32,12 @@ def to_polars_frame(obj, name='obj', lazy=False):
     '''
 
     # validate object type
-    validate_value(
-        value=obj,
-        name=name,
-        types=POLARS_TYPES + PANDAS_TYPES
+    (
+    Validator(
+        types=(POLARS_TYPES + PANDAS_TYPES)
         )
+    .validate(obj, name)
+    )
 
     is_polars = isinstance(obj, POLARS_TYPES)
 

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ....validation import validate_value
+from ....validation import Validator
 
 
 def get_index_names(obj, simplify=False, drop_none=False):
@@ -29,8 +29,7 @@ def get_index_names(obj, simplify=False, drop_none=False):
 
     if simplify and drop_none:
         raise ValueError(
-            "'simplify' and 'drop_none' arguments "
-            "cannot both be True."
+            "'simplify' and 'drop_none' arguments cannot both be True."
             )
 
     names = list(obj.index.names)
@@ -43,8 +42,8 @@ def get_index_names(obj, simplify=False, drop_none=False):
 
     if len(names) != n_levels:
         raise ValueError(
-            f'Length of index names ({len(names)}) does '
-            f'not match number of levels ({n_levels}?'
+            f'Length of index names ({len(names)}) does not match number of '
+            f'levels ({n_levels}?'
             )
 
     all_none = all(name is None for name in names)
@@ -53,14 +52,13 @@ def get_index_names(obj, simplify=False, drop_none=False):
         return []
 
     if not all_none:
-        for name in names:
-            validate_value(
-                value=name,
-                name='index name',
-                types=str,
-                none_ok=False,
-                empty_ok=False,
-                )
+        vd = Validator(
+            types=str,
+            allow_blank=False,
+            )
+
+        for i, name in enumerate(names):
+            vd.validate(name, f'index name at level {i}')
 
     if simplify and len(names) == 1:
         return names[0]
@@ -107,7 +105,8 @@ def has_default_index(obj, ignore_name=True):
         return False
 
     default_index = pd.RangeIndex(len(obj))
-    return obj.index.equals(default_index)
+    is_default = obj.index.equals(default_index)
+    return is_default
 
 
 def ensure_index_names(obj, name_template=None):
@@ -128,7 +127,7 @@ def ensure_index_names(obj, name_template=None):
 
     Returns
     ------------
-    out : pd.DataFrame | pd.Series
+    result : pd.DataFrame | pd.Series
         Object with named index.
     '''
     obj = obj.copy(deep=True)

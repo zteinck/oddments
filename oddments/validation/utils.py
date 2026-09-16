@@ -1,181 +1,13 @@
-from collections import Counter
-
-import numpy as np
 import polars as pl
 
-from ..natural import natural_join
-
-
-def validate_value(
-    value,
-    types,
-    name='value',
-    finite=False,
-    min_value=None,
-    max_value=None,
-    min_inclusive=False,
-    max_inclusive=False,
-    whitelist=None,
-    blacklist=None,
-    none_ok=False,
-    empty_ok=True
-    ):
-    '''
-    Description
-    ------------
-    Validates an an argument's type and value.
-
-    Parameters
-    ------------
-    value : *
-        argument to validate
-    types : object | tuple
-        one or more valid types of which value is allowed to be an instance.
-    name : str | None
-        Optional name of value to include in error messages. If None, 'value'
-        is used.
-    finite : bool
-        if True, the value is not allowed to be -np.inf, +np.inf, np.nan, or
-        any other value that would cause np.isfinite to return False.
-    min_value : float | None
-        minimum allowed value
-    max_value : float | None
-        maximum allowed value
-    min_inclusive : bool
-        if True, value is allowed to be equal to min_value (e.g. greater than
-        or equal to)
-    max_inclusive : bool
-        if True, value is allowed to be equal to max_value (e.g. less than or
-        equal to)
-    whitelist : str | list
-        list of acceptable values
-    blacklist : str | list
-        list of prohibited values
-    none_ok : bool
-        if True, None is an acceptable value and no further validation is
-        necessary.
-    empty_ok : bool
-        if True, len(value) is allowed to be zero.
-
-    Returns
-    ------------
-    None
-    '''
-
-    if none_ok and value is None:
-        return
-
-    # encase variable names in single quotes but not descriptions
-    parts = name.strip().split()
-    name = ' '.join(parts)
-    if len(parts) == 1:
-        name = f"'{name}'"
-
-    if not isinstance(types, tuple):
-        types = (types,)
-
-    if not isinstance(value, types):
-        all_types = types + (type(value),)
-        type_counts =  Counter(x.__name__ for x in all_types)
-
-        type_names = []
-        for x in all_types:
-            type_name = x.__name__
-            if type_counts[type_name] > 1:
-                type_name = (
-                    x.__module__.split('.')[0]
-                    + '.' + type_name
-                    )
-            type_names.append(f'<{type_name}>')
-
-        value_type_name = type_names.pop()
-        type_names = natural_join(type_names, 'or')
-
-        raise TypeError(
-            f'{name} must be a {type_names}, '
-            f'got: {value_type_name}.'
-            )
-
-    if blacklist is not None:
-        if isinstance(blacklist, str):
-            blacklist = [blacklist]
-
-        try:
-            blacklist = set(blacklist)
-        except TypeError:
-            pass
-
-        if value in blacklist:
-            raise ValueError(
-                f'{name} cannot be in {blacklist}, '
-                f'got: {value!r}.'
-                )
-
-    if whitelist is not None:
-        if isinstance(whitelist, str):
-            whitelist = [whitelist]
-
-        typed_whitelist = [
-            x for x in whitelist
-            if isinstance(x, type(value))
-            ]
-
-        if typed_whitelist:
-            try:
-                typed_whitelist = set(typed_whitelist)
-            except TypeError:
-                pass
-
-            if value in typed_whitelist:
-                return
-
-            raise ValueError(
-                f'{name} must be in {whitelist}, '
-                f'got: {value!r}.'
-                )
-
-    if not empty_ok and len(value) == 0:
-        raise ValueError(
-            f"{name} cannot be empty."
-            )
-
-    if finite:
-        if not np.isfinite(value):
-            raise TypeError(
-                f'{name} must be finite, '
-                f'got: {value!r}.'
-                )
-
-    msg = f"{name} must be {{0}} {{1}}, got: {value!r}"
-
-    if min_value is not None:
-        symbol = None
-        if min_inclusive and value < min_value:
-            symbol = '≥'
-        if not min_inclusive and value <= min_value:
-            symbol = '>'
-        if symbol is not None:
-            raise ValueError(
-                msg.format(symbol, min_value)
-                )
-
-    if max_value is not None:
-        symbol = None
-        if max_inclusive and value > max_value:
-            symbol = '≤'
-        if not max_inclusive and value >= max_value:
-            symbol = '<'
-        if symbol is not None:
-            raise ValueError(
-                msg.format(symbol, max_value)
-                )
+from .validator import Validator
 
 
 def sanitize_subset(
     subset,
     superset=None,
     subset_name='subset',
-    superset_name='superset'
+    superset_name='superset',
     ):
     '''
     Description
@@ -202,12 +34,13 @@ def sanitize_subset(
 
     def sanitize(value, name):
 
-        validate_value(
-            value=value,
-            name=name,
+        (
+        Validator(
             types=(str, list, tuple, set),
-            none_ok=True,
+            allow_none=True,
             )
+        .validate(value, name)
+        )
 
         if value is None:
             return None
@@ -223,21 +56,34 @@ def sanitize_subset(
             nan_to_null=True,
             )
 
-        out = (
+        result = (
             s
             .drop_nulls()
             .unique(maintain_order=True)
             .to_list()
             )
 
-        validate_value(
-            value=out,
-            name=f'sanitized {name!r}',
+        (
+        Validator(
             types=list,
-            empty_ok=False,
+            allow_empty=False,
+            )
+        .validate(
+            result,
+            f'sanitized {name!r}',
+            )
+        )
+
+        vd = Validator(
+            types=str,
+            allow_blank=False,
+            # require_stripped=True, # messes up purge whitespace
             )
 
-        return out
+        for i, col in enumerate(result):
+            vd.validate(col, f'at position {i}')
+
+        return result
 
 
     subset = sanitize(subset, subset_name)
@@ -258,8 +104,8 @@ def sanitize_subset(
 
     if extra_cols:
         raise ValueError(
-            f'{subset_name} includes column names not '
-            f'found in {superset_name}: {extra_cols}'
+            f'{subset_name} includes column names not found in '
+            f'{superset_name}: {extra_cols}'
             )
 
     return subset

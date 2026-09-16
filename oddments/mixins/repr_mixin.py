@@ -1,6 +1,6 @@
 
 
-class ReprMixin(object):
+class ReprMixin:
 
     #╭-------------------------------------------------------------------------╮
     #| Magic Methods                                                           |
@@ -20,7 +20,10 @@ class ReprMixin(object):
                 for k in repr_attrs
                 }
 
-        content = [f'{k}={v!r},' for k, v in data.items()]
-        content = '(' + ('\n' + ' ' * 4).join(['', *content, ')'])
-        text = self.__class__.__name__ + content
+        content = ', '.join(
+            f'{k}={v!r}'
+            for k, v in data.items()
+            )
+
+        text = f'{self.__class__.__name__}({content})'
         return text

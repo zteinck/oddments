@@ -4,9 +4,11 @@ import polars as pl
 import polars.selectors as cs
 
 from ...validation import (
-    validate_value,
+    Validator,
     sanitize_subset,
     )
+
+_DEFAULT_SAMPLE_SIZE = 5
 
 
 def _preserve_input_type(func):
@@ -34,7 +36,7 @@ def _preserve_input_type(func):
 
     Returns
     ------------
-    out : None | pl.LazyFrame | pl.DataFrame | pl.Series
+    result : None | pl.LazyFrame | pl.DataFrame | pl.Series
         Decorated function's return value recast to match the original input
         type.
     '''
@@ -49,15 +51,18 @@ def _preserve_input_type(func):
         ):
 
         # validate input type
-        validate_value(
-            value=obj,
-            name='obj',
+        (
+        Validator(
             types=(
                 pl.LazyFrame,
                 pl.DataFrame,
                 pl.Series,
                 )
             )
+        .validate(
+            obj=obj
+            )
+        )
 
         # capture input's original type
         input_type = type(obj)
@@ -97,19 +102,24 @@ def _preserve_input_type(func):
             lf = lf.fill_nan(None)
 
         # name housekeeping
-        validate_value(
-            value=name,
-            name='name',
+        (
+        Validator(
             types=str,
-            none_ok=True,
-            empty_ok=False,
+            allow_none=True,
+            allow_blank=False,
             )
+        .validate(
+            name=name
+            )
+        )
 
         if name is None:
             name = input_type.__name__
+        elif len(name.split()) == 1:
+            name = repr(name)
 
         # call decorated function
-        out = func(
+        result = func(
             lf=lf,
             subset=subset,
             name=name,
@@ -117,41 +127,100 @@ def _preserve_input_type(func):
             )
 
         # verify decorated function returned a LazyFrame
-        validate_value(
-            value=out,
-            name='out',
+        (
+        Validator(
             types=pl.LazyFrame,
-            none_ok=True,
+            allow_none=True,
             )
+        .validate(
+            result=result
+            )
+        )
 
         # return early if result is None
-        if out is None:
+        if result is None:
             return
 
         # if input was not a LazyFrame, materialize the DataFrame
         if not_lazy:
-            out = out.collect()
+            result = result.collect()
 
         # recast return value to Series, if necessary
         if is_series:
-            if out.width == 1:
-                out = out.to_series()
+            if result.width == 1:
+                result = result.to_series()
             else:
                 raise ValueError(
-                    'Expected a single-column DataFrame, '
-                    f'got {out.width:,} columns.'
+                    'Expected a single-column DataFrame, got '
+                    f'{result.width:,} columns.'
                     )
 
         # verify return value mirrors the original input type
-        validate_value(
-            value=out,
-            name='output',
-            types=input_type,
-            )
+        Validator(types=input_type).validate(result=result)
 
-        return out
+        return result
 
     return wrapper
+
+
+@_preserve_input_type
+def assert_no_nulls(lf, subset, name, how='any'):
+    '''
+    Description
+    ------------
+    Raises an error when subset column(s) contain nulls, based on the
+    selected criterion.
+
+    Parameters
+    ------------
+    how : str
+        Determines how a row qualifies as invalid:
+            • 'any' → Rows that contain at least one null value in any subset
+                column.
+            • 'all' → Rows entirely comprised of null values in the subset
+                column(s).
+
+    Returns
+    ------------
+    None
+    '''
+
+    how_map = {
+        'any': pl.any_horizontal,
+        'all': pl.all_horizontal,
+        }
+
+    (
+    Validator(
+        types=str,
+        whitelist=list(how_map.keys()),
+        )
+    .validate(
+        how=how
+        )
+    )
+
+    # select invalid rows based on the selected criterion
+    lf = lf.filter(
+        how_map[how](
+            pl.col(subset).is_null()
+            )
+        )
+
+    # get total number of invalid rows
+    n_rows = lf.select(pl.len()).collect().item()
+
+    # return early if no invalid rows were identified
+    if n_rows == 0:
+        return
+
+    # get a sample of invalid rows for reference
+    df = lf.limit(_DEFAULT_SAMPLE_SIZE).collect()
+
+    raise ValueError(
+        f'Nulls detected in {name}. Showing {df.height:,} of {n_rows:,} '
+        f'rows with {how} nulls in subset {subset}:\n\n{df}'
+        )
 
 
 @_preserve_input_type
@@ -186,42 +255,33 @@ def _assert_unique_with_polars(
 
     if freq in set(subset):
         raise ValueError(
-            f'Column name {freq!r} is reserved for the '
-            'frequency column created by this operation.'
+            f'Column name {freq!r} is reserved for the frequency column '
+            'created by this operation.'
             )
 
-    validate_value(
-        value=null_policy,
-        name='null_policy',
+    (
+    Validator(
         types=str,
-        whitelist=['include','exclude','error']
+        whitelist=['include','exclude','error'],
         )
+    .validate(
+        null_policy=null_policy
+        )
+    )
 
-    if null_policy == 'error':
-        null_counts = (
-            lf.select([
-                pl.col(col).null_count().alias(col)
-                for col in subset
-                ])
-            .unpivot(
-                variable_name='column',
-                value_name=freq
-                )
-            .filter(pl.col(freq) > 0)
-            .top_k(5, by=freq)
-            .collect()
-            )
-
-        if not null_counts.is_empty():
-            raise ValueError(
-                f'Nulls detected in {name}:\n\n{null_counts}'
-                )
-
-    elif null_policy == 'exclude':
+    if null_policy == 'exclude':
         lf = lf.filter(
             pl.all_horizontal(
                 pl.col(subset).is_not_null()
                 )
+            )
+
+    elif null_policy == 'error':
+        assert_no_nulls(
+            lf,
+            subset=subset,
+            name=name,
+            how='any',
             )
 
     dupe_counts = (
@@ -229,15 +289,14 @@ def _assert_unique_with_polars(
         .group_by(subset)
         .len()
         .filter(pl.col(freq) > 1)
-        .top_k(5, by=freq)
+        .top_k(_DEFAULT_SAMPLE_SIZE, by=freq)
         .select([*subset, freq])
         .collect()
         )
 
     if not dupe_counts.is_empty():
         raise ValueError(
-            'Duplicates detected in '
-            f'{name}:\n\n{dupe_counts}'
+            f'Duplicates detected in {name}:\n\n{dupe_counts}'
             )
 
 
@@ -278,27 +337,24 @@ def _trim_nulls_with_polars(
         Amended logical plan.
     '''
 
-    validate_value(
-        value=which,
-        name='which',
+    # Note: the mapping is intentionally inverted becaues the check is for not
+    # null.
+    how_map = {
+        'any': pl.all_horizontal,
+        'all': pl.any_horizontal,
+        }
+
+    (
+    Validator(
         types=str,
-        whitelist=['both','leading','trailing']
+        whitelist=list(how_map.keys()),
         )
-
-    validate_value(
-        value=how,
-        name='how',
-        types=str,
-        whitelist=['any','all']
+    .validate(
+        how=how
         )
+    )
 
-    how_func = (
-        pl.all_horizontal
-        if how == 'any'
-        else pl.any_horizontal
-        )
-
-    mask = how_func(pl.col(subset).is_not_null())
+    mask = how_map[how](pl.col(subset).is_not_null())
 
     not_leading = mask.cum_sum() > 0
     not_trailing = mask.reverse().cum_sum().reverse() > 0
@@ -309,34 +365,31 @@ def _trim_nulls_with_polars(
         'both': not_leading & not_trailing,
         }
 
+    (
+    Validator(
+        types=str,
+        whitelist=list(which_map.keys()),
+        )
+    .validate(
+        which=which
+        )
+    )
+
     lf = lf.filter(which_map[which])
 
-    # find a sample of rows where any subset column is null
     if not allow_nulls:
-
-        sample = (
-            lf
-            .filter(
-                pl.any_horizontal(
-                    pl.col(subset)
-                    .is_null()
-                    )
-                )
-            .limit(5)
-            .collect()
+        assert_no_nulls(
+            lf,
+            subset=subset,
+            name=name,
+            how='any',
             )
-
-        if not sample.is_empty():
-            raise ValueError(
-                'Remaining nulls detected in '
-                f'{name}:\n\n{sample}'
-                )
 
     return lf
 
 
 @_preserve_input_type
-def _purge_whitespace_with_polars(lf, subset, **kwargs):
+def _purge_whitespace_with_polars(lf, subset, name):
     '''
     Description
     ------------
@@ -353,16 +406,19 @@ def _purge_whitespace_with_polars(lf, subset, **kwargs):
         Amended logical plan.
     '''
 
-    renames = {
+    mapping = {
         col: col.strip()
         for col in subset
         }
 
-    new_subset = list(renames.values())
+    new_subset = list(mapping.values())
 
     lf = (
         lf
-        .rename(renames)
+        .rename(
+            mapping=mapping,
+            strict=True,
+            )
         .with_columns(
             (cs.by_name(new_subset) & cs.string())
             .str.strip_chars().replace('', None)

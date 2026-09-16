@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ...validation import validate_value
+from ...validation import Validator
 from .decorators import validate_pandas_objs
 from .dupes import _assert_unique_with_pandas
 
@@ -44,6 +44,12 @@ def _prep_merge_params(kwargs, _join):
     # validate and format join key parameters
     keys = ('on', 'left_on', 'right_on')
 
+    vd = Validator(
+        types=(list, str),
+        allow_none=True,
+        allow_empty=False,
+        )
+
     for key in keys:
         if key in params:
             if _join:
@@ -53,14 +59,7 @@ def _prep_merge_params(kwargs, _join):
                     )
 
             value = params[key]
-
-            validate_value(
-                value=value,
-                name=key,
-                types=(list, str),
-                none_ok=True,
-                empty_ok=False,
-                )
+            vd.validate(value, key)
 
             params[key] = (
                 [value]
@@ -278,7 +277,7 @@ def join(objs, **kwargs):
     df : pd.DataFrame
         Joined objects
     '''
-    verify_index_names(objs, none_ok=True)
+    verify_index_names(objs, allow_none=True)
     df = merge(objs, _join=True, **kwargs)
     return df
 
@@ -323,7 +322,7 @@ def concat(objs, **kwargs):
     for key, default in defaults.items():
         params.setdefault(key, default)
 
-    verify_index_names(objs, none_ok=True)
+    verify_index_names(objs, allow_none=True)
     index_names = get_index_names(objs[0])
 
     key = 'ignore_index'

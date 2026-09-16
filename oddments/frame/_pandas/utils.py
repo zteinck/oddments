@@ -43,7 +43,7 @@ def columns_apply(df, func, inplace=False):
 
     Returns
     ------------
-    out : pd.DataFrame | None
+    result : pd.DataFrame | None
         renamed dataframe is returned if inplace=False otherwise None
     '''
     renames = {
@@ -66,15 +66,15 @@ def infer_data_types(obj):
 
     def preprocess_obj(obj):
         if isinstance(obj, pd.DataFrame):
-            out = obj.copy(deep=True)
+            result = obj.copy(deep=True)
         elif isinstance(obj, pd.Series):
-            out = obj.to_frame().copy(deep=True)
+            result = obj.to_frame().copy(deep=True)
         else:
             raise TypeError(
                 "'obj' argument type not supported: "
                 f"{type(obj).__name__}"
                 )
-        return _purge_whitespace_with_pandas(out)
+        return _purge_whitespace_with_pandas(result)
 
 
     df = preprocess_obj(obj)

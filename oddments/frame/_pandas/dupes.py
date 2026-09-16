@@ -2,7 +2,7 @@ from functools import wraps
 
 import pandas as pd
 
-from ...validation import validate_value
+from ...validation import Validator
 from .coercion import preserve_input_type
 
 from .indexing import (
@@ -57,7 +57,7 @@ def drop_duplicates(df, **kwargs):
 
     Returns
     ------------
-    out : pd.DataFrame | pd.Series
+    result : pd.DataFrame | pd.Series
         Pandas object with duplicates removed.
     '''
     params = {**kwargs}
@@ -140,19 +140,28 @@ def _assert_unique_with_pandas(
         if isinstance(obj, list):
             obj = pd.Series(obj)
 
-        if len(obj) < 2: return
+        if len(obj) < 2:
+            return
+
         s = obj.value_counts(dropna=False)
 
         dupes = s[(s > 1)]
-        if dupes.empty: return
 
-        if show_top is not None \
-            and show_top < len(dupes):
+        if dupes.empty:
+            return
+
+        if (
+            show_top is not None
+            and show_top < len(dupes)
+            ):
             dupes = dupes.head(show_top)
             msg = f'{msg} (top {show_top} showing)'
 
         dupes = dupes.to_frame()
-        raise ValueError(f'{msg}:\n\n{dupes}\n')
+
+        raise ValueError(
+            f'{msg}:\n\n{dupes}\n'
+            )
 
 
     # default alias
@@ -198,19 +207,25 @@ def _assert_unique_with_pandas(
         mask = df.index.duplicated(keep=False)
         check(df.index[mask], f'{msg} index values')
 
-    if df.empty: return
+    if df.empty:
+        return
 
     if isinstance(column_values, bool):
-        if not column_values: return
+        if not column_values:
+            return
         subset = df.columns.tolist()
+
     elif isinstance(column_values, str):
         subset = [column_values]
+
     else:
-        validate_value(column_values, list)
+        Validator(types=list).validate(column_values)
         subset = column_values[:]
 
+    vd = Validator(types=str)
+
     for k in subset:
-        validate_value(k, name='column', types=str)
+        vd.validate(column=k)
 
     df = df[subset]
 
@@ -219,7 +234,8 @@ def _assert_unique_with_pandas(
 
     if dropna:
         df = df.dropna()
-        if df.empty: return
+        if df.empty:
+            return
 
     # using mask to make value_counts more efficient
     mask = df.duplicated(keep=False)

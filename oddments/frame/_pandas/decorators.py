@@ -3,7 +3,7 @@ from functools import wraps
 import pandas as pd
 
 from ...iteration import ensure_list
-from ...validation import validate_value
+from ...validation import Validator
 
 
 def ignore_nan(func):
@@ -41,12 +41,10 @@ def validate_pandas_objs(func):
         if not objs:
             raise ValueError("'objs' cannot be empty.")
 
+        vd = Validator(types=(pd.DataFrame, pd.Series))
+
         for obj in objs:
-            validate_value(
-                value=obj,
-                name='object',
-                types=(pd.DataFrame, pd.Series)
-                )
+            vd.validate(obj=obj)
 
         return func(objs, *args, **kwargs)
 

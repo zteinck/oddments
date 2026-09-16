@@ -1,6 +1,6 @@
 import numpy as np
 
-from ...validation import validate_value
+from ...validation import Validator
 from .coercion import apply_to_pandas_series
 from .indexing import verify_index_values
 
@@ -31,40 +31,43 @@ def _trim_nulls_with_pandas(
 
     Returns
     ------------
-    out : pd.Series
+    result : pd.Series
        Series without leading and/or trailing null values.
     '''
 
-    validate_value(
-        value=which,
-        name='which',
+    (
+    Validator(
         types=str,
         whitelist=['both','leading','trailing']
         )
+    .validate(
+        which=which
+        )
+    )
 
     verify_index_values(s)
 
     if s.empty:
         return s
 
-    out = s.copy(deep=True)
+    result = s.copy(deep=True)
 
     if inf_as_na:
-        out.replace(
+        result.replace(
             to_replace=[np.inf, -np.inf],
             value=np.nan,
             inplace=True
             )
 
-    if out.isna().all():
+    if result.isna().all():
         if raise_on_na:
             raise ValueError(
                 'Series only contains nulls.'
                 )
-        return out.dropna()
+        return result.dropna()
 
-    first = out.first_valid_index()
-    last = out.last_valid_index()
+    first = result.first_valid_index()
+    last = result.last_valid_index()
 
     bounds = {
         'both': (first, last),
@@ -73,14 +76,14 @@ def _trim_nulls_with_pandas(
         }
 
     left, right = bounds[which]
-    out = out.loc[left:right]
+    result = result.loc[left:right]
 
-    valid = out.notna()
+    valid = result.notna()
 
     if not raise_on_na or valid.all():
-        return out
+        return result
 
-    nulls = s.loc[(out[(~valid)].index)]
+    nulls = s.loc[(result[(~valid)].index)]
 
     raise ValueError(
         f'Series contains nulls:\n\n{nulls}\n'

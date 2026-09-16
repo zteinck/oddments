@@ -39,7 +39,7 @@ def _coercion_handler(
 
     Returns
     ------------
-    out : pd.DataFrame | pd.Series | any
+    result : pd.DataFrame | pd.Series | any
         Coerced data
     '''
     args = [*wrapped_args]
@@ -67,12 +67,12 @@ def _coercion_handler(
 
     mods.append(obj)
     args = mods + args
-    out = wrapped_func(*args, **kwargs)
+    result = wrapped_func(*args, **kwargs)
 
     if preserve_ndim:
-        return coerce_ndim(out, ndim)
+        return coerce_ndim(result, ndim)
 
-    return out
+    return result
 
 
 def apply_to_pandas_series(func):
@@ -121,13 +121,13 @@ def preserve_input_type(func):
 
         is_series = check_if_series(obj)
 
-        out = func(
+        result = func(
             to_pandas_frame(obj),
             *args,
             **kwargs
             )
 
-        if out is None:
+        if result is None:
             return
 
         coerce = (
@@ -136,6 +136,6 @@ def preserve_input_type(func):
             else to_pandas_frame
             )
 
-        return coerce(out)
+        return coerce(result)
 
     return wrapper
